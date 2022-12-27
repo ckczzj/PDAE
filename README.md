@@ -106,7 +106,7 @@ cd ./sampler
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 gap_measure.py --world_size 4
 ```
 
-<div align=center><img src="./images/gap_measure_result.png" height="200"/></div>
+<div align=center><img src="./images/gap_measure_result.png" height="300"/></div>
 
 
 
