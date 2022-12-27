@@ -1,0 +1,36 @@
+dataset_config:
+  name: "celebahq"
+  data_path: "../data/celebahq"
+  image_size: 128
+  image_channel: 3
+  training_augmentation: False
+
+diffusion_config:
+  timesteps: 1000
+  betas_type: "linear"
+  linear_beta_start: 0.0001
+  linear_beta_end: 0.02
+
+trained_representation_learning_config: "../trained-models/autoencoder/celebahq128/config.yml"
+trained_representation_learning_checkpoint: "../trained-models/autoencoder/celebahq128/checkpoint.pt"
+inferred_latents: "../trained-models/latents/celebahq.pt"
+
+dataloader_config:
+  num_workers: 5
+  batch_size: 512
+
+optimizer_config:
+  lr: 1e-4
+  adam_betas: (0.9, 0.999)
+  adam_eps: 1e-8
+  weight_decay: 0.0
+  enable_amp: False
+
+runner_config:
+  evaluate_every_steps: 50000
+  save_latest_every_steps: 10000
+  save_checkpoint_every_steps: 50000
+  ema_every: 1
+  ema_decay: 0.9999
+  num_iterations: 1
+  run_base_path: "../runs"

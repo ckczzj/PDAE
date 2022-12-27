@@ -1,0 +1,44 @@
+dataset_config:
+  name: "celeba64"
+  data_path: "../data/celeba64"
+  image_size: 64
+  image_channel: 3
+  latent_dim: &latent_dim 512
+  training_augmentation: True
+
+diffusion_config:
+  timesteps: 1000
+  betas_type: "linear"
+  linear_beta_start: 0.0001
+  linear_beta_end: 0.02
+
+trained_ddpm_config: "../pre-trained-dpms/celeba64/config.yml"
+trained_ddpm_checkpoint: "../pre-trained-dpms/celeba64/checkpoint.pt"
+
+encoder_config:
+  model: "CELEBA64Encoder"
+  latent_dim: *latent_dim
+
+decoder_config:
+  model: "CELEBA64Decoder"
+  latent_dim: *latent_dim
+
+dataloader_config:
+  num_workers: 3
+  batch_size: 128
+
+optimizer_config:
+  lr: 1e-4
+  adam_betas: (0.9, 0.999)
+  adam_eps: 1e-8
+  weight_decay: 0.0
+  enable_amp: False
+
+runner_config:
+  evaluate_every_steps: 5000
+  save_latest_every_steps: 1000
+  save_checkpoint_every_steps: 10000
+  num_iterations: 1
+  ema_every: 1
+  ema_decay: 0.9999
+  run_base_path: "../runs"

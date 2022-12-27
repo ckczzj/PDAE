@@ -1,0 +1,41 @@
+dataset_config:
+  name: "bedroom"
+  data_path: "../data/bedroom"
+  image_size: 128
+  image_channel: 3
+  latent_dim: &latent_dim 512
+  training_augmentation: False
+
+trained_representation_learning_config: "../trained-models/autoencoder/bedroom128/config.yml"
+trained_representation_learning_checkpoint: "../trained-models/autoencoder/bedroom128/checkpoint.pt"
+inferred_latents: "../trained-models/latents/bedroom.pt"
+
+latent_denoise_fn_config:
+  model: "BEDROOMLatentDenoiseFn"
+  input_channel: *latent_dim
+  model_channel: 2048
+  num_layers: 20
+  time_emb_channel: 64
+  use_norm: True
+  dropout: 0.0
+
+dataloader_config:
+  num_workers: 5
+  batch_size: 512
+
+optimizer_config:
+  name: "Adam"
+  lr: 1e-3
+  adam_betas: (0.9, 0.999)
+  adam_eps: 1e-8
+  weight_decay: 0.0
+  enable_amp: False
+
+runner_config:
+  evaluate_every_steps: 10000
+  save_latest_every_steps: 1000
+  save_checkpoint_every_steps: 10000
+  ema_every: 1
+  ema_decay: 0.9999
+  num_iterations: 1
+  run_base_path: "../runs"
