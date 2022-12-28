@@ -2,13 +2,12 @@
 
 This repository is official PyTorch implementation of [PDAE](https://arxiv.org/abs/2212.12990) (NeurIPS 2022).
 
->
->@inproceedings{zhangunsupervised,
->  	title={Unsupervised Representation Learning from Pre-trained Diffusion Probabilistic Models},
->  	author={Zhang, Zijian and Zhao, Zhou and Lin, Zhijie},
->  	booktitle={Advances in Neural Information Processing Systems}
->}
->
+> @inproceedings{zhangunsupervised,
+> title={Unsupervised Representation Learning from Pre-trained Diffusion Probabilistic Models},
+> author={Zhang, Zijian and Zhao, Zhou and Lin, Zhijie},
+> booktitle={Advances in Neural Information Processing Systems}
+> }
+
 
 
 
