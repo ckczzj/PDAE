@@ -65,18 +65,10 @@ class GaussianDiffusion:
         return torch.gather(schedule, -1, t).reshape([x_shape[0]] + [1] * (len(x_shape) - 1))
 
     @staticmethod
-    def space_timesteps(num_timesteps, section_counts):
-        desired_count = int(section_counts[len("ddim"):])
-        for i in range(1, num_timesteps):
-            if len(range(0, num_timesteps, i)) == desired_count:
-                use_timesteps = set(range(0, num_timesteps, i))
-                use_timesteps.add(num_timesteps-1)
-                return use_timesteps
-
-    @staticmethod
     def get_ddim_betas_and_timestep_map(ddim_style, original_alphas_cumprod):
         original_timesteps = original_alphas_cumprod.shape[0]
-        use_timesteps = GaussianDiffusion.space_timesteps(original_timesteps, ddim_style)
+        dim_step = int(ddim_style[len("ddim"):])
+        use_timesteps = set([int(s) for s in list(np.linspace(0, original_timesteps - 1, dim_step + 1))])
         timestep_map = []
 
         last_alpha_cumprod = 1.0
