@@ -5,29 +5,35 @@ from functools import partial
 from tqdm import tqdm
 
 class DDIM:
-    def __init__(self, betas, timestep_map, device):
+    def __init__(self, betas, timestep_map, original_timesteps, device):
         super().__init__()
         self.device=device
         self.timestep_map = timestep_map.to(self.device)
-        self.timesteps = betas.shape[0]
+        if betas.shape[0] == original_timesteps:  # ddim1000
+            self.timesteps = betas.shape[0]
+            self.backward_timestep_shift = 0
+        else:
+            self.timesteps = betas.shape[0] - 1
+            self.backward_timestep_shift = 1
 
+        # length = timesteps + 1
         alphas = 1. - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
-        alphas_cumprod_prev = np.append(1., alphas_cumprod[:-1])
-        alphas_cumprod_next = np.append(alphas_cumprod[1:], 0.)
+        alphas_cumprod_prev = np.append(1., alphas_cumprod[:-1])  # 1. will never be used
+        alphas_cumprod_next = np.append(alphas_cumprod[1:], 0.)  # 0. will never be used
 
         to_torch = partial(torch.tensor, dtype=torch.float32, device=self.device)
 
-        self.alphas = to_torch(alphas)
-        self.betas = to_torch(betas)
-        self.alphas_cumprod = to_torch(alphas_cumprod)
+        # self.alphas = to_torch(alphas)
+        # self.betas = to_torch(betas)
+        # self.alphas_cumprod = to_torch(alphas_cumprod)
         self.alphas_cumprod_prev = to_torch(alphas_cumprod_prev)
         self.alphas_cumprod_next = to_torch(alphas_cumprod_next)
 
-        # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.sqrt_alphas_cumprod = to_torch(np.sqrt(alphas_cumprod))
+
+        # self.sqrt_alphas_cumprod = to_torch(np.sqrt(alphas_cumprod))
         self.sqrt_one_minus_alphas_cumprod = to_torch(np.sqrt(1. - alphas_cumprod))
-        self.log_one_minus_alphas_cumprod = to_torch(np.log(1. - alphas_cumprod))
+        # self.log_one_minus_alphas_cumprod = to_torch(np.log(1. - alphas_cumprod))
         self.sqrt_recip_alphas_cumprod = to_torch(np.sqrt(1. / alphas_cumprod))
         self.sqrt_recip_alphas_cumprod_m1 = to_torch(np.sqrt(1. / alphas_cumprod - 1.))
 
@@ -57,7 +63,7 @@ class DDIM:
         shape = x_T.shape
         batch_size = shape[0]
         img = x_T
-        for i in tqdm(reversed(range(0, self.timesteps)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             img = self.ddim_sample(denoise_fn, img, t)
         return img
@@ -113,7 +119,7 @@ class DDIM:
 
         stop_step = int(stop_percent * self.timesteps)
 
-        for i in tqdm(reversed(range(0, self.timesteps)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             img = self.shift_ddim_sample(decoder, z, img, t, use_shift=True if i >= stop_step else False)
         return img
@@ -140,7 +146,7 @@ class DDIM:
         shape = x_0.shape
         batch_size = shape[0]
         x_t = x_0
-        for i in tqdm(range(0, self.timesteps), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(range(0, self.timesteps), desc='encoding loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             x_t = self.shift_ddim_encode(decoder, z, x_t, t)
         return x_t
@@ -150,7 +156,7 @@ class DDIM:
         batch_size = shape[0]
         x_t = x_T
 
-        for i in tqdm(reversed(range(0, self.timesteps)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
 
             predicted_noise, gradient_1 = decoder(x_t, self.t_transform(t), z_1)
@@ -200,7 +206,7 @@ class DDIM:
         shape = z_T.shape
         batch_size = shape[0]
         z = z_T
-        for i in tqdm(reversed(range(0, self.timesteps)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             z = self.ddim_sample(latent_denoise_fn, z, t)
         return z

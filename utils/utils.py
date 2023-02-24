@@ -229,35 +229,35 @@ def calculate_mse(img1, img2):
     return (img1 - img2).pow(2).mean(dim=[1, 2, 3])
 
 
-def space_timesteps(num_timesteps, section_counts):
-    if isinstance(section_counts, str):
-        if section_counts.startswith("ddim"):
-            desired_count = int(section_counts[len("ddim"):])
-            for i in range(1, num_timesteps):
-                if len(range(0, num_timesteps, i)) == desired_count:
-                    return set(range(0, num_timesteps, i))
-            raise ValueError(
-                f"cannot create exactly {num_timesteps} steps with an integer stride"
-            )
-        section_counts = [int(x) for x in section_counts.split(",")]
-    size_per = num_timesteps // len(section_counts)
-    extra = num_timesteps % len(section_counts)
-    start_idx = 0
-    all_steps = []
-    for i, section_count in enumerate(section_counts):
-        size = size_per + (1 if i < extra else 0)
-        if size < section_count:
-            raise ValueError(
-                f"cannot divide section of {size} steps into {section_count}")
-        if section_count <= 1:
-            frac_stride = 1
-        else:
-            frac_stride = (size - 1) / (section_count - 1)
-        cur_idx = 0.0
-        taken_steps = []
-        for _ in range(section_count):
-            taken_steps.append(start_idx + round(cur_idx))
-            cur_idx += frac_stride
-        all_steps += taken_steps
-        start_idx += size
-    return set(all_steps)
+# def space_timesteps(num_timesteps, section_counts):
+#     if isinstance(section_counts, str):
+#         if section_counts.startswith("ddim"):
+#             desired_count = int(section_counts[len("ddim"):])
+#             for i in range(1, num_timesteps):
+#                 if len(range(0, num_timesteps, i)) == desired_count:
+#                     return set(range(0, num_timesteps, i))
+#             raise ValueError(
+#                 f"cannot create exactly {num_timesteps} steps with an integer stride"
+#             )
+#         section_counts = [int(x) for x in section_counts.split(",")]
+#     size_per = num_timesteps // len(section_counts)
+#     extra = num_timesteps % len(section_counts)
+#     start_idx = 0
+#     all_steps = []
+#     for i, section_count in enumerate(section_counts):
+#         size = size_per + (1 if i < extra else 0)
+#         if size < section_count:
+#             raise ValueError(
+#                 f"cannot divide section of {size} steps into {section_count}")
+#         if section_count <= 1:
+#             frac_stride = 1
+#         else:
+#             frac_stride = (size - 1) / (section_count - 1)
+#         cur_idx = 0.0
+#         taken_steps = []
+#         for _ in range(section_count):
+#             taken_steps.append(start_idx + round(cur_idx))
+#             cur_idx += frac_stride
+#         all_steps += taken_steps
+#         start_idx += size
+#     return set(all_steps)
