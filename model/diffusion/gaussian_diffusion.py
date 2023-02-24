@@ -177,12 +177,12 @@ class GaussianDiffusion:
     """
     def ddim_sample(self, ddim_style, denoise_fn, x_T):
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(ddim_style, self.alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         return ddim.ddim_sample_loop(denoise_fn, x_T)
 
     def ddim_encode(self, ddim_style, denoise_fn, x_0):
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(ddim_style, self.alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         return ddim.ddim_encode_loop(denoise_fn, x_0)
 
     """
@@ -231,14 +231,14 @@ class GaussianDiffusion:
         if z is None:
             z = encoder(x_0)
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(ddim_style, self.alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         return ddim.shift_ddim_sample_loop(decoder, z, x_T, stop_percent=stop_percent)
 
     def representation_learning_ddim_encode(self, ddim_style, encoder, decoder, x_0, z=None):
         if z is None:
             z = encoder(x_0)
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(ddim_style, self.alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         return ddim.shift_ddim_encode_loop(decoder, z, x_0)
 
     def representation_learning_autoencoding(self, encoder_ddim_style, decoder_ddim_style, encoder, decoder, x_0):
@@ -292,7 +292,7 @@ class GaussianDiffusion:
 
     def representation_learning_ddim_trajectory_interpolation(self, ddim_style, decoder, z_1, z_2, x_T, alpha):
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(ddim_style, self.alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         return ddim.shift_ddim_trajectory_interpolation(decoder, z_1, z_2, x_T, alpha)
 
     """
@@ -364,7 +364,7 @@ class GaussianDiffusion:
         z_T.clamp_(-1.0, 1.0) # may slightly improve sample quality
 
         new_betas, timestep_map = self.get_ddim_betas_and_timestep_map(latent_ddim_style, alphas_cumprod.cpu().numpy())
-        ddim = DDIM(new_betas, timestep_map, self.timesteps, self.device)
+        ddim = DDIM(new_betas, timestep_map, self.device)
         z = ddim.latent_ddim_sample_loop(latent_denoise_fn, z_T)
 
         z = self.denormalize(z, latents_mean, latents_std)

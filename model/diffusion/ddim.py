@@ -5,16 +5,11 @@ from functools import partial
 from tqdm import tqdm
 
 class DDIM:
-    def __init__(self, betas, timestep_map, original_timesteps, device):
+    def __init__(self, betas, timestep_map, device):
         super().__init__()
         self.device=device
         self.timestep_map = timestep_map.to(self.device)
-        if betas.shape[0] == original_timesteps:  # ddim1000
-            self.timesteps = betas.shape[0]
-            self.backward_timestep_shift = 0
-        else:
-            self.timesteps = betas.shape[0] - 1
-            self.backward_timestep_shift = 1
+        self.timesteps = betas.shape[0] - 1
 
         # length = timesteps + 1
         alphas = 1. - betas
@@ -63,7 +58,7 @@ class DDIM:
         shape = x_T.shape
         batch_size = shape[0]
         img = x_T
-        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + 1, self.timesteps + 1)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             img = self.ddim_sample(denoise_fn, img, t)
         return img
@@ -119,7 +114,7 @@ class DDIM:
 
         stop_step = int(stop_percent * self.timesteps)
 
-        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + 1, self.timesteps + 1)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             img = self.shift_ddim_sample(decoder, z, img, t, use_shift=True if i >= stop_step else False)
         return img
@@ -156,7 +151,7 @@ class DDIM:
         batch_size = shape[0]
         x_t = x_T
 
-        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + 1, self.timesteps + 1)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
 
             predicted_noise, gradient_1 = decoder(x_t, self.t_transform(t), z_1)
@@ -206,7 +201,7 @@ class DDIM:
         shape = z_T.shape
         batch_size = shape[0]
         z = z_T
-        for i in tqdm(reversed(range(0 + self.backward_timestep_shift, self.timesteps + self.backward_timestep_shift)), desc='sampling loop time step', total=self.timesteps):
+        for i in tqdm(reversed(range(0 + 1, self.timesteps + 1)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
             z = self.ddim_sample(latent_denoise_fn, z, t)
         return z
