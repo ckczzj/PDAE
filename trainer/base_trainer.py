@@ -140,10 +140,10 @@ class BaseTrainer(ABC):
         base_seed = base_seed[0]
         print(self.rank, "data_loader_seed", base_seed)
         while True:
-            for data in self.train_dataloader:
-                yield data
             base_seed += 1
             self.train_sampler.set_epoch(base_seed)
+            for data in self.train_dataloader:
+                yield data
 
     @abstractmethod
     def _build_model(self):
