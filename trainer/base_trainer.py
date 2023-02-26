@@ -124,7 +124,7 @@ class BaseTrainer(ABC):
             sampler=self.eval_sampler,
             pin_memory=False,
             collate_fn=self.eval_dataset.collate_fn,
-            # main process is enough for sampling, no subprocesses spawn, no need for worker_init_fn
+            # main process is enough for sampling, no subprocesses spawn, no need for worker_init_fn, no need for persistent_workers
             num_workers=0,
             # 36: showing a 6x6 image grid in tensorboard
             batch_size=self.dispatch_num_samples_for_process(36, self.world_size, rank=self.rank)

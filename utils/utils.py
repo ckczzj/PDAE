@@ -47,7 +47,7 @@ class set_worker_seed_builder():
     def __call__(self, worker_id):
         # use time to avoid same seed when restoring
         # based on seconds, will be almost same for different processes
-        base_seed = time.time_ns() // 1000000000 % 88888888
+        base_seed = int(time.time()) % 88888888
         worker_seed = base_seed + worker_id * 1024 + self.rank * 1024 * 1024
         random.seed(worker_seed)
         np.random.seed(worker_seed + 1)
