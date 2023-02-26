@@ -106,6 +106,7 @@ class BaseTrainer(ABC):
             pin_memory=True,
             collate_fn=self.train_dataset.collate_fn,
             worker_init_fn=set_worker_seed_builder(self.rank),
+            persistent_workers=True,
             **dataloader_config
         )
         self.train_dataloader_infinite_cycle = self.build_train_dataloader_infinite_cycle()
@@ -119,14 +120,14 @@ class BaseTrainer(ABC):
         )
 
         self.eval_dataloader = DataLoader(
-            self.eval_dataset,
+            dataset=self.eval_dataset,
             sampler=self.eval_sampler,
             pin_memory=False,
             collate_fn=self.eval_dataset.collate_fn,
+            # main process is enough for sampling, no subprocesses spawn, no need for worker_init_fn
             num_workers=0,
             # 36: showing a 6x6 image grid in tensorboard
-            batch_size=self.dispatch_num_samples_for_process(36, self.world_size, rank=self.rank),
-            worker_init_fn=set_worker_seed_builder(self.rank)
+            batch_size=self.dispatch_num_samples_for_process(36, self.world_size, rank=self.rank)
         )
 
     def build_train_dataloader_infinite_cycle(self):
@@ -139,10 +140,10 @@ class BaseTrainer(ABC):
         base_seed = base_seed[0]
         print(self.rank, "data_loader_seed", base_seed)
         while True:
-            base_seed += 1
-            self.train_sampler.set_epoch(base_seed)
             for data in self.train_dataloader:
                 yield data
+            base_seed += 1
+            self.train_sampler.set_epoch(base_seed)
 
     @abstractmethod
     def _build_model(self):

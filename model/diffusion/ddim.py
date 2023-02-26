@@ -116,7 +116,7 @@ class DDIM:
 
         for i in tqdm(reversed(range(0 + 1, self.timesteps + 1)), desc='sampling loop time step', total=self.timesteps):
             t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
-            img = self.shift_ddim_sample(decoder, z, img, t, use_shift=True if i >= stop_step else False)
+            img = self.shift_ddim_sample(decoder, z, img, t, use_shift=True if (i - 1) >= stop_step else False)
         return img
 
 
