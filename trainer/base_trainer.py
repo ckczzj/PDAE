@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 import torch
 from torch.utils.data import Subset, DataLoader
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from dataset import *
 from utils import save_yaml, set_seed, set_worker_seed_builder
@@ -40,13 +40,13 @@ class BaseTrainer(ABC):
             self._build_everything()
             self.load(os.path.join(os.path.join(self.run_path, 'checkpoints'), 'latest.pt'))
             if self.rank == 0:
-                self.writer = SummaryWriter(logdir=os.path.join(self.run_path, 'tb'), flush_secs=10, purge_step=self.step + 1)
+                self.writer = SummaryWriter(log_dir=os.path.join(self.run_path, 'tb'), flush_secs=10, purge_step=self.step + 1)
         else: # train from scratch
             if self.rank == 0:
                 os.makedirs(os.path.join(self.run_path, 'checkpoints'), exist_ok=True)
                 os.makedirs(os.path.join(self.run_path, 'samples'), exist_ok=True)
                 save_yaml(os.path.join(self.run_path, 'config.yml'), self.config)
-                self.writer = SummaryWriter(logdir=os.path.join(self.run_path, 'tb'), flush_secs=10)
+                self.writer = SummaryWriter(log_dir=os.path.join(self.run_path, 'tb'), flush_secs=10)
                 self.writer.add_text('config', str(self.config))
                 self.writer.flush()
             self._build_everything()
