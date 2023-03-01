@@ -91,10 +91,10 @@ class Sampler(BaseSampler):
                 x_0 = move_to_cuda(batch["net_input"]["x_0"])
 
                 # inferred x_T
-                # reconstruction = self.gaussian_diffusion.representation_learning_autoencoding(f'ddim1000', f'ddim100', self.encoder, self.decoder, x_0)
+                reconstruction = self.gaussian_diffusion.representation_learning_autoencoding(f'ddim1000', f'ddim100', self.encoder, self.decoder, x_0)
 
                 # random x_T
-                reconstruction = self.gaussian_diffusion.representation_learning_ddim_sample(f'ddim100', self.encoder, self.decoder, x_0, torch.randn_like(x_0))
+                # reconstruction = self.gaussian_diffusion.representation_learning_ddim_sample(f'ddim100', self.encoder, self.decoder, x_0, torch.randn_like(x_0))
 
                 norm_x_0 = (x_0 + 1.) / 2.
                 norm_reconstruction = (reconstruction + 1.) / 2.
