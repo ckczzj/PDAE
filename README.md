@@ -97,6 +97,15 @@ CUDA_VISIBLE_DEVICES=0 python3 autoencoding_example.py
 
 
 
+```
+cd ./sampler
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 autoencoding_eval.py --world_size 4
+```
+
+PDAE achieves autoencoding reconstruction **SOTA** performance of **SSIM(0.994)** and **MSE(3.84e-5)** when using inferred $x_{T}$.
+
+
+
 
 ```
 cd ./sampler
