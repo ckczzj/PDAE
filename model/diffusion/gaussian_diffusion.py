@@ -178,6 +178,36 @@ class GaussianDiffusion:
         return ddim.ddim_encode_loop(denoise_fn, x_0)
 
     """
+        regular
+    """
+    def regular_train_one_batch(self, denoise_fn, x_0):
+        shape = x_0.shape
+        batch_size = shape[0]
+        t = torch.randint(0, self.timesteps, (batch_size,), device=self.device, dtype=torch.long)
+        noise = torch.randn_like(x_0)
+        x_t = self.q_sample(x_0=x_0, t=t, noise=noise)
+        predicted_noise = denoise_fn(x_t, t)
+
+        prediction_loss = self.p_loss(noise, predicted_noise)
+
+        return {
+            'prediction_loss': prediction_loss,
+        }
+
+    def regular_ddim_sample(self, ddim_style, denoise_fn, x_T):
+        return self.ddim_sample(ddim_style, denoise_fn, x_T)
+
+    def regular_ddpm_sample(self, denoise_fn, x_T):
+        shape = x_T.shape
+        batch_size = shape[0]
+        img = x_T
+        for i in tqdm(reversed(range(0, self.timesteps)), desc='sampling loop time step', total=self.timesteps):
+            t = torch.full((batch_size,), i, device=self.device, dtype=torch.long)
+            predicted_noise = denoise_fn(img, t, None)
+            img = self.noise_p_sample(img, t, predicted_noise)
+        return img
+
+    """
         representation learning
     """
     def representation_learning_train_one_batch(self, encoder, decoder, x_0):

@@ -67,7 +67,10 @@ class BaseTrainer(ABC):
         self.dataset_config = self.config["dataset_config"]
         self.dataset_name = self.dataset_config["name"]
 
-        if self.dataset_name == "ffhq":
+        if self.dataset_name == "mnist":
+            self.train_dataset = MNIST(self.dataset_config, train=True)
+            self.eval_dataset = MNIST(self.dataset_config, train=False)
+        elif self.dataset_name == "ffhq":
             self.train_dataset = FFHQ(self.dataset_config, augmentation=self.dataset_config["training_augmentation"])
             self.eval_dataset = FFHQ(self.dataset_config, augmentation=False)
         elif self.dataset_name == "bedroom":

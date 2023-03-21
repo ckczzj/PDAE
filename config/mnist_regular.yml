@@ -1,0 +1,51 @@
+dataset_config:
+  name: "mnist"
+  data_path: "../data/mnist"
+  image_size: 32
+  image_channel: &image_channel 1
+
+diffusion_config:
+  timesteps: 1000
+  betas_type: "linear"
+  linear_beta_start: 0.0001
+  linear_beta_end: 0.02
+
+denoise_fn_config:
+  model: "MNISTDenoiseFn"
+  # num_class: *num_class  # uncomment this line for condition training
+  dims: 2
+  input_channel: *image_channel
+  base_channel: 64
+  channel_multiplier: [ 1, 2, 2, 4 ] # there are len(channel_multiplier) blocks, downsample and upsample len(channel_multiplier)-1 times, no downsample or upsample at the last multiplier
+  num_residual_blocks_of_a_block: 2
+  dropout: 0.0
+
+  # below settings are useful only when the attention_resolutions list is not empty
+  attention_resolutions: [ ] # attention will be used at x-times downsampling if x in this list, empty for not using attention
+  use_new_attention_order: False  # True for MNIST and False for the others
+  num_heads: 1
+  head_channel: -1 # if head_channel==-1 then num_heads=num_heads, else num_heads=(multiplier*base_channel)//head_channel
+
+dataloader_config:
+  num_workers: 2
+  batch_size: 128
+  drop_last: True
+
+optimizer_config:
+  lr: 1e-4
+  adam_betas: (0.9, 0.999)
+  adam_eps: 1e-8
+  weight_decay: 0.0
+  enable_amp: False
+
+runner_config:
+#  evaluate_every_steps: 5000
+#  save_latest_every_steps: 1000
+#  save_checkpoint_every_steps: 10000
+  evaluate_every_steps: 100
+  save_latest_every_steps: 100
+  save_checkpoint_every_steps: 100
+  num_iterations: 1
+  ema_every: 1
+  ema_decay: 0.9999
+  run_base_path: "../runs"
