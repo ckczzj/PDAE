@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from dataset import *
+import dataset as dataset_module
 from utils import save_yaml, set_seed, set_worker_seed_builder
 
 
@@ -64,39 +64,25 @@ class BaseTrainer(ABC):
         print('rank{}: optimizer built.'.format(self.rank))
 
     def _build_dataloader(self):
-        self.dataset_config = self.config["dataset_config"]
-        self.dataset_name = self.dataset_config["name"]
+        train_dataset_config = self.config["train_dataset_config"]
+        eval_dataset_config = copy.deepcopy(train_dataset_config)
+        eval_dataset_config.update(self.config["eval_dataset_config"])
+        dataset_name = train_dataset_config["name"]
 
-        if self.dataset_name == "mnist":
-            self.train_dataset = MNIST(self.dataset_config, train=True)
-            self.eval_dataset = MNIST(self.dataset_config, train=False)
-        elif self.dataset_name == "ffhq":
-            self.train_dataset = FFHQ(self.dataset_config, augmentation=self.dataset_config["training_augmentation"])
-            self.eval_dataset = FFHQ(self.dataset_config, augmentation=False)
-        elif self.dataset_name == "bedroom":
-            self.train_dataset = BEDROOM(self.dataset_config, augmentation=self.dataset_config["training_augmentation"])
-            self.eval_dataset = BEDROOM(self.dataset_config, augmentation=False)
-        elif self.dataset_name == "horse":
-            self.train_dataset = HORSE(self.dataset_config, augmentation=self.dataset_config["training_augmentation"])
-            self.eval_dataset = HORSE(self.dataset_config, augmentation=False)
-        elif self.dataset_name == "celeba64":
-            self.train_dataset = CELEBA64(self.dataset_config, split="train", augmentation=self.dataset_config["training_augmentation"])
-            self.eval_dataset = CELEBA64(self.dataset_config, split="valid", augmentation=False)
-        elif self.dataset_name == "celebahq":
-            self.train_dataset = CELEBAHQ(self.dataset_config, augmentation=self.dataset_config["training_augmentation"])
-            self.eval_dataset = CELEBAHQ(self.dataset_config, augmentation=False)
-        else:
-            raise NotImplementedError
+        train_dataset = getattr(dataset_module, dataset_name, None)(train_dataset_config)
+        eval_dataset = getattr(dataset_module, dataset_name, None)(eval_dataset_config)
 
         # dispatch batch_size
         dataloader_config = copy.deepcopy(self.config["dataloader_config"])
         global_batch_size = dataloader_config["batch_size"]
         local_batch_size = global_batch_size // self.world_size
+        if global_batch_size % self.world_size != 0:
+            local_batch_size += 1
         assert local_batch_size > 0
         dataloader_config["batch_size"] = local_batch_size
 
         self.train_sampler = torch.utils.data.distributed.DistributedSampler(
-            dataset=self.train_dataset,
+            dataset=train_dataset,
             num_replicas=self.world_size,
             rank=self.rank,
             shuffle=True,
@@ -104,10 +90,10 @@ class BaseTrainer(ABC):
         )
 
         self.train_dataloader = DataLoader(
-            dataset=self.train_dataset,
+            dataset=train_dataset,
             sampler=self.train_sampler,
             pin_memory=True,
-            collate_fn=self.train_dataset.collate_fn,
+            collate_fn=train_dataset.collate_fn,
             worker_init_fn=set_worker_seed_builder(self.rank),
             persistent_workers=True,
             **dataloader_config
@@ -115,7 +101,7 @@ class BaseTrainer(ABC):
         self.train_dataloader_infinite_cycle = self.build_train_dataloader_infinite_cycle()
 
         self.eval_sampler = torch.utils.data.distributed.DistributedSampler(
-            dataset=self.eval_dataset,
+            dataset=eval_dataset,
             num_replicas=self.world_size,
             rank=self.rank,
             shuffle=True,
@@ -123,10 +109,10 @@ class BaseTrainer(ABC):
         )
 
         self.eval_dataloader = DataLoader(
-            dataset=self.eval_dataset,
+            dataset=eval_dataset,
             sampler=self.eval_sampler,
             pin_memory=False,
-            collate_fn=self.eval_dataset.collate_fn,
+            collate_fn=eval_dataset.collate_fn,
             # main process is enough for sampling, no subprocesses spawn, no need for worker_init_fn, no need for persistent_workers
             num_workers=0,
             # 36: showing a 6x6 image grid in tensorboard

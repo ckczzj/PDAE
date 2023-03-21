@@ -8,13 +8,13 @@ from torchvision import transforms
 from utils import open_lmdb
 
 class HORSE(Dataset):
-    def __init__(self, config, augmentation=True):
+    def __init__(self, config):
         super().__init__()
         self.config = config
         self.image_size = self.config["image_size"]
         self.image_channel = self.config["image_channel"]
         self.data_path = self.config["data_path"]
-        self.augmentation = augmentation
+        self.augmentation = self.config["augmentation"]
 
         if self.augmentation:
             self.transform = transforms.Compose([

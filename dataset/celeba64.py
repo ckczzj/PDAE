@@ -14,14 +14,14 @@ class CropCelebA64(object):
         return new_img
 
 class CELEBA64(Dataset):
-    def __init__(self, config, split="train", augmentation=True):
+    def __init__(self, config):
         super().__init__()
         self.config = config
         self.data_path = self.config["data_path"]
         self.image_channel = self.config["image_channel"]
         self.image_size = self.config["image_size"]
-        self.split = split
-        self.augmentation = augmentation
+        self.split = self.config["split"]
+        self.augmentation = self.config["augmentation"]
 
         if self.augmentation:
             self.transform = transforms.Compose([

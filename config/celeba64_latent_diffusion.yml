@@ -1,10 +1,14 @@
-dataset_config:
-  name: "celeba64"
+train_dataset_config:
+  name: "CELEBA64"
   data_path: "../data/celeba64"
   image_size: 64
   image_channel: 3
   latent_dim: &latent_dim 512
-  training_augmentation: False
+  split: "train"
+  augmentation: False
+eval_dataset_config:
+  split: "eval"
+  augmentation: False
 
 trained_representation_learning_config: "../trained-models/autoencoder/celeba64/config.yml"
 trained_representation_learning_checkpoint: "../trained-models/autoencoder/celeba64/checkpoint.pt"

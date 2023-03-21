@@ -1,10 +1,12 @@
-dataset_config:
-  name: "ffhq"
+train_dataset_config:
+  name: "FFHQ"
   data_path: "../data/ffhq"
   image_size: 128
   image_channel: 3
   latent_dim: &latent_dim 512
-  training_augmentation: False
+  augmentation: False
+eval_dataset_config:
+  augmentation: False
 
 trained_representation_learning_config: "../trained-models/autoencoder/ffhq128/config.yml"
 trained_representation_learning_checkpoint: "../trained-models/autoencoder/ffhq128/checkpoint.pt"

@@ -1,10 +1,12 @@
-dataset_config:
-  name: "horse"
+train_dataset_config:
+  name: "HORSE"
   data_path: "../data/horse"
   image_size: 128
   image_channel: 3
   latent_dim: &latent_dim 512
-  training_augmentation: True
+  augmentation: True
+eval_dataset_config:
+  augmentation: False
 
 diffusion_config:
   timesteps: 1000

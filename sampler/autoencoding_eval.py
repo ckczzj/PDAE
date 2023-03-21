@@ -29,8 +29,8 @@ class Sampler(BaseSampler):
         data_path = self.config["data_path"]
         image_size = self.config["image_size"]
         image_channel = self.config["image_channel"]
-
-        dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel}, augmentation=False)
+        augmentation = self.config["augmentation"]
+        dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
 
         # dispatch batch_size
         global_batch_size = self.config["batch_size"]
@@ -166,6 +166,7 @@ if __name__ == '__main__':
         "data_path": "../data/celebahq",
         "image_channel": 3,
         "image_size": 128,
+        "augmentation": False,
 
         "batch_size": 120,
         "num_workers": 2,

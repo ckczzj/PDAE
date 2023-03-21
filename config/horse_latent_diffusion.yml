@@ -1,10 +1,12 @@
-dataset_config:
-  name: "horse"
+train_dataset_config:
+  name: "HORSE"
   data_path: "../data/horse"
   image_size: 128
   image_channel: 3
   latent_dim: &latent_dim 512
-  training_augmentation: False
+  augmentation: False
+eval_dataset_config:
+  augmentation: False
 
 trained_representation_learning_config: "../trained-models/autoencoder/horse128/config.yml"
 trained_representation_learning_checkpoint: "../trained-models/autoencoder/horse128/checkpoint.pt"

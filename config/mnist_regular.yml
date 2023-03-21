@@ -1,8 +1,11 @@
-dataset_config:
-  name: "mnist"
+train_dataset_config:
+  name: "MNIST"
   data_path: "../data/mnist"
   image_size: 32
   image_channel: &image_channel 1
+  train: True
+eval_dataset_config:
+  train: False
 
 diffusion_config:
   timesteps: 1000

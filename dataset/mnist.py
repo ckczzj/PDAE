@@ -7,12 +7,13 @@ from torchvision import transforms
 from utils import get_one_hot
 
 class MNIST(Dataset):
-    def __init__(self, config, train=True):
+    def __init__(self, config):
         super().__init__()
         self.config = config
         self.image_size = self.config["image_size"]
         self.image_channel = self.config["image_channel"]
         self.data_path = self.config["data_path"]
+        self.train = self.config["train"]
 
         transform = transforms.Compose([
             transforms.Resize(self.image_size),
@@ -20,7 +21,7 @@ class MNIST(Dataset):
             transforms.Normalize((0.5,), (0.5,), inplace=True),  # -1 ~ 1
         ])
 
-        self.dataset = torchvision.datasets.MNIST(self.data_path, train=train, download=True, transform=transform)
+        self.dataset = torchvision.datasets.MNIST(self.data_path, train=self.train, download=True, transform=transform)
 
     def __len__(self):
         return len(self.dataset)

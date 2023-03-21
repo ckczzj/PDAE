@@ -29,8 +29,9 @@ class Sampler(BaseSampler):
         data_path = self.config["data_path"]
         image_size = self.config["image_size"]
         image_channel = self.config["image_channel"]
+        augmentation = self.config["augmentation"]
         total_num = self.config["total_num"]
-        dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel}, augmentation=False)
+        dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
         subset = Subset(
             dataset,
             np.random.choice(list(range(len(dataset))), total_num, True)
@@ -151,6 +152,7 @@ if __name__ == '__main__':
         "data_path": "../data/ffhq",
         "image_channel": 3,
         "image_size": 128,
+        "augmentation": False,
 
         "batch_size": 100,
         "total_num": 1000,

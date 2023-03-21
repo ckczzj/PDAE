@@ -1,9 +1,11 @@
-dataset_config:
-  name: "celebahq"
+train_dataset_config:
+  name: "CELEBAHQ"
   data_path: "../data/celebahq"
   image_size: 128
   image_channel: 3
-  training_augmentation: False
+  augmentation: False
+eval_dataset_config:
+  augmentation: False
 
 diffusion_config:
   timesteps: 1000

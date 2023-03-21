@@ -11,13 +11,13 @@ from utils import open_lmdb
 
 
 class CELEBAHQ(Dataset):
-    def __init__(self, config, augmentation=True):
+    def __init__(self, config):
         super().__init__()
         self.config = config
         self.data_path = self.config["data_path"]
         self.image_channel = self.config["image_channel"]
         self.image_size = self.config["image_size"]
-        self.augmentation = augmentation
+        self.augmentation = self.config["augmentation"]
 
         if self.augmentation:
             self.transform = transforms.Compose([

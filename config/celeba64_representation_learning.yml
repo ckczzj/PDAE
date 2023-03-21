@@ -1,10 +1,14 @@
-dataset_config:
-  name: "celeba64"
+train_dataset_config:
+  name: "CELEBA64"
   data_path: "../data/celeba64"
   image_size: 64
   image_channel: 3
   latent_dim: &latent_dim 512
-  training_augmentation: True
+  split: "train"
+  augmentation: True
+eval_dataset_config:
+  split: "eval"
+  augmentation: False
 
 diffusion_config:
   timesteps: 1000

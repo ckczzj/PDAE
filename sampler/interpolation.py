@@ -21,6 +21,7 @@ config = {
     "data_path": "../data/celebahq",
     "image_channel": 3,
     "image_size": 128,
+    "augmentation": False,
 
     "image_index_1": 17570,
     "image_index_2": 23404,
@@ -45,7 +46,8 @@ dataset_name = config["dataset_name"]
 data_path = config["data_path"]
 image_size = config["image_size"]
 image_channel = config["image_channel"]
-dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel}, augmentation=False)
+augmentation = config["augmentation"]
+dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
 
 def calculate_theta(a,b):
     return torch.arccos(torch.dot(a.view(-1),b.view(-1))/(torch.norm(a)*torch.norm(b)))

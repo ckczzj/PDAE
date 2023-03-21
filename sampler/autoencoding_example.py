@@ -21,6 +21,7 @@ config = {
     "data_path": "../data/celebahq",
     "image_channel": 3,
     "image_size": 128,
+    "augmentation": False,
 
     "image_index": 29506,
 }
@@ -44,7 +45,8 @@ dataset_name = config["dataset_name"]
 data_path = config["data_path"]
 image_size = config["image_size"]
 image_channel = config["image_channel"]
-dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel}, augmentation=False)
+augmentation = config["augmentation"]
+dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
 
 image_index = config["image_index"]
 
