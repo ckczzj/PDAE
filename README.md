@@ -55,9 +55,18 @@ You should put download in the root dicretory of this project and maintain their
 
 ## Training
 
+To train DDPM, run this command:
+
+```
+cd ./trainer
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_regular.py --world_size 4
+```
+
+
+
 To train PDAE, run this command:
 
-```train
+```
 cd ./trainer
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_representation_learning.py --world_size 4
 ```

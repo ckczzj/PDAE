@@ -39,12 +39,9 @@ optimizer_config:
   enable_amp: False
 
 runner_config:
-#  evaluate_every_steps: 5000
-#  save_latest_every_steps: 1000
-#  save_checkpoint_every_steps: 10000
-  evaluate_every_steps: 100
-  save_latest_every_steps: 100
-  save_checkpoint_every_steps: 100
+  evaluate_every_steps: 5000
+  save_latest_every_steps: 1000
+  save_checkpoint_every_steps: 10000
   num_iterations: 1
   ema_every: 1
   ema_decay: 0.9999
