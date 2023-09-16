@@ -6,20 +6,19 @@ from collections import defaultdict
 
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
-from torch.optim import Adam, AdamW
+from torch.optim import Adam
 
 import model.representation_learning.encoder as encoder_module
 import model.representation_learning.decoder as decoder_module
-import model.representation_learning.latent_denoise_fn as latent_denoise_fn_module
-
 from diffusion.gaussian_diffusion import GaussianDiffusion
 
 from utils.utils import move_to_cuda, save_image, load_yaml
 from trainer.base_trainer import BaseTrainer
 
 
-class LatentDiffusionTrainer(BaseTrainer):
+class ManipulationTrainer(BaseTrainer):
     def __init__(self, args):
         super().__init__(args)
         print('rank{}: trainer initialized.'.format(self.global_rank))
@@ -29,15 +28,14 @@ class LatentDiffusionTrainer(BaseTrainer):
 
         self.gaussian_diffusion = GaussianDiffusion(trained_representation_learning_config["diffusion_config"], device=self.device)
 
-        latent_denoise_fn = getattr(latent_denoise_fn_module, self.config["latent_denoise_fn_config"]["model"], None)(**self.config["latent_denoise_fn_config"])
-        self.latent_denoise_fn = DistributedDataParallel(copy.deepcopy(latent_denoise_fn).cuda(), device_ids=[self.device])
-        self.latent_denoise_fn_without_ddp = self.latent_denoise_fn.module
-        self.ema_latent_denoise_fn = copy.deepcopy(latent_denoise_fn).cuda()
-        del latent_denoise_fn
+        classifier = nn.Linear(512, 40)
+        self.classifier = DistributedDataParallel(copy.deepcopy(classifier).cuda(), device_ids=[self.device])
+        self.classifier_without_ddp = self.classifier.module
+        self.ema_classifier = copy.deepcopy(classifier).cuda()
+        del classifier
 
-        self.ema_latent_denoise_fn.eval()
-        self.ema_latent_denoise_fn.requires_grad_(False)
-
+        self.ema_classifier.eval()
+        self.ema_classifier.requires_grad_(False)
 
         encoder = getattr(encoder_module, trained_representation_learning_config["encoder_config"]["model"], None)(**trained_representation_learning_config["encoder_config"])
         self.encoder = copy.deepcopy(encoder).cuda()
@@ -57,43 +55,30 @@ class LatentDiffusionTrainer(BaseTrainer):
 
         # load latents stat
         self.latents = self.load_inferred_latents(self.config["inferred_latents"])
-        self.latents_mean = self.latents["mean"].to(self.device)
-        self.latents_std = self.latents["std"].to(self.device)
+        self.latents_mean = self.latents['mean'].to(self.device)
+        self.latents_std = self.latents['std'].to(self.device)
 
         self.enable_amp = self.config["optimizer_config"]["enable_amp"]
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.enable_amp)
 
         if self.config["runner_config"]["compile"]:
-            self.latent_denoise_fn = torch.compile(self.latent_denoise_fn)
+            self.classifier = torch.compile(self.classifier)
 
     def _build_optimizer(self):
         optimizer_config = self.config["optimizer_config"]
 
-        if optimizer_config["name"] == "Adam":
-            self.optimizer = Adam(
-                [
-                    {"params": self.latent_denoise_fn_without_ddp.parameters()},
-                ],
-                lr = float(optimizer_config["lr"]),
-                betas = eval(optimizer_config["adam_betas"]),
-                eps = float(optimizer_config["adam_eps"]),
-                weight_decay= float(optimizer_config["weight_decay"]),
-            )
-        elif optimizer_config["name"] == "AdamW":
-            self.optimizer = AdamW(
-                [
-                    {"params": self.latent_denoise_fn_without_ddp.parameters()},
-                ],
-                lr = float(optimizer_config["lr"]),
-                betas = eval(optimizer_config["adam_betas"]),
-                eps = float(optimizer_config["adam_eps"]),
-                weight_decay= float(optimizer_config["weight_decay"]),
-            )
-        else:
-            raise NotImplementedError()
+        self.optimizer = Adam(
+            [
+                {"params": self.classifier_without_ddp.parameters()},
+            ],
+            lr = float(optimizer_config["lr"]),
+            betas = eval(optimizer_config["adam_betas"]),
+            eps = float(optimizer_config["adam_eps"]),
+            weight_decay= float(optimizer_config["weight_decay"]),
+        )
 
     def train(self):
-        acc_prediction_loss = 0
+        acc_bce_loss = 0
         acc_final_loss = 0
         time_meter = defaultdict(float)
 
@@ -101,7 +86,7 @@ class LatentDiffusionTrainer(BaseTrainer):
         while True:
             start_time_top = time.time_ns()
 
-            self.latent_denoise_fn.train()
+            self.classifier.train()
             self.optimizer.zero_grad()
 
             # to solve small batch size for large data
@@ -115,19 +100,20 @@ class LatentDiffusionTrainer(BaseTrainer):
 
                 with torch.cuda.amp.autocast(enabled=self.enable_amp):
                     start_time = time.time_ns()
-                    output = self.gaussian_diffusion.latent_diffusion_train_one_batch(
-                        latent_denoise_fn=self.latent_denoise_fn,
+                    output = self.gaussian_diffusion.manipulation_train_one_batch(
+                        classifier=self.classifier,
                         encoder=self.encoder,
                         x_0=move_to_cuda(batch["net_input"]["x_0"]),
-                        latents_mean=self.latents_mean,
-                        latents_std=self.latents_std,
+                        label=move_to_cuda(batch["net_input"]["label"]),
+                        latents_mean=move_to_cuda(self.latents_mean),
+                        latents_std=move_to_cuda(self.latents_std),
                     )
                     time_meter['forward'] += (time.time_ns() - start_time) / 1e9
 
-                    prediction_loss = output['prediction_loss'] / num_iterations
-                    final_loss = prediction_loss
+                    bce_loss = output['bce_loss'] / num_iterations
+                    final_loss = bce_loss
 
-                    acc_prediction_loss += prediction_loss.item()
+                    acc_bce_loss += bce_loss.item()
                     acc_final_loss += final_loss.item()
 
                 start_time = time.time_ns()
@@ -149,9 +135,9 @@ class LatentDiffusionTrainer(BaseTrainer):
             time_meter['step'] += (time.time_ns() - start_time_top) / 1e9
 
             if self.step % display_steps == 0:
-                info = 'rank{}: step = {}, pred = {:.5f}, final = {:.5f}, lr = {:.6f}'.format(
+                info = 'rank{}: step = {}, bce = {:.5f}, final = {:.5f}, lr = {:.6f}'.format(
                     self.global_rank, self.step,
-                    acc_prediction_loss / display_steps,
+                    acc_bce_loss / display_steps,
                     acc_final_loss / display_steps,
                     self.optimizer.defaults["lr"])
                 print('{} '.format(info), end=' - ')
@@ -159,14 +145,14 @@ class LatentDiffusionTrainer(BaseTrainer):
                     print('{}: {:.2f} secs'.format(k, v), end=', ')
                 print()
 
-                data = {'acc_prediction_loss': acc_prediction_loss, 'acc_final_loss': acc_final_loss}
+                data = {'acc_bce_loss': acc_bce_loss, 'acc_final_loss': acc_final_loss}
                 gather_data = self.gather_data(data)
                 if self.global_rank == 0:
-                    self.writer.add_scalar("prediction_loss", float(np.mean([data["acc_prediction_loss"] for data in gather_data])) / display_steps, self.step)
+                    self.writer.add_scalar("bce_loss", float(np.mean([data["acc_bce_loss"] for data in gather_data])) / display_steps, self.step)
                     self.writer.add_scalar("final_loss", float(np.mean([data["acc_final_loss"] for data in gather_data])) / display_steps, self.step)
                     self.writer.add_scalar("learning_rate", self.optimizer.defaults["lr"], self.step)
 
-                acc_prediction_loss = 0
+                acc_bce_loss = 0
                 acc_final_loss = 0
                 time_meter.clear()
 
@@ -184,40 +170,49 @@ class LatentDiffusionTrainer(BaseTrainer):
             self.eval_sampler.set_epoch(self.step)
 
             for batch in self.eval_dataloader:
-                images = self.gaussian_diffusion.latent_diffusion_sample(
-                    latent_ddim_style=f'ddim100',
-                    decoder_ddim_style=f'ddim100',
-                    latent_denoise_fn=self.ema_latent_denoise_fn,
+                x_0 = move_to_cuda(batch["net_input"]["x_0"])
+                inferred_x_T = self.gaussian_diffusion.representation_learning_ddim_encode(f'ddim500', self.encoder, self.decoder, x_0)
+                images = self.gaussian_diffusion.manipulation_sample(
+                    classifier_weight=self.ema_classifier.weight,
+                    encoder=self.encoder,
                     decoder=self.decoder,
-                    x_T=move_to_cuda(batch["net_input"]["x_T"]),
-                    latents_mean=self.latents_mean,
-                    latents_std=self.latents_std,
+                    x_0=x_0,
+                    inferred_x_T=inferred_x_T,
+                    latents_mean=move_to_cuda(self.latents_mean),
+                    latents_std=move_to_cuda(self.latents_std),
+                    class_id=31,
+                    scale=0.3,
+                    ddim_style=f'ddim200',
                 )
                 images = images.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
                 images = images.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
                 data = {'images': images.tolist()}
+                data.update({'gts': batch['gts'].tolist()})
                 gather_data = self.gather_data(data)
                 break
 
             if self.global_rank == 0:
                 images = []
+                gts = []
                 for data in gather_data:
                     images.extend(data["images"])
+                    gts.extend(data['gts'])
                 images = np.asarray(images, dtype=np.uint8)
-                figure = save_image(images, os.path.join(self.run_path, 'samples', "sample{}k.png".format(self.step // 1000)))
+                gts = np.asarray(gts, dtype=np.uint8)
+                figure = save_image(images, os.path.join(self.run_path, 'samples', "sample{}k.png".format(self.step // 1000)),gts=gts)
                 # only writer of rank0 is None
                 self.writer.add_figure("result", figure, self.step)
 
     def accumulate(self, decay):
-        self.latent_denoise_fn.eval()
-        self.ema_latent_denoise_fn.eval()
+        self.classifier.eval()
+        self.ema_classifier.eval()
 
-        ema_latent_denoise_fn_parameter = dict(self.ema_latent_denoise_fn.named_parameters())
-        latent_denoise_fn_parameter = dict(self.latent_denoise_fn_without_ddp.named_parameters())
+        ema_classifier_parameter = dict(self.ema_classifier.named_parameters())
+        classifier_parameter = dict(self.classifier_without_ddp.named_parameters())
 
-        for k in ema_latent_denoise_fn_parameter.keys():
-            if latent_denoise_fn_parameter[k].requires_grad:
-                ema_latent_denoise_fn_parameter[k].data.mul_(decay).add_(latent_denoise_fn_parameter[k].data, alpha=1.0 - decay)
+        for k in ema_classifier_parameter.keys():
+            if classifier_parameter[k].requires_grad:
+                ema_classifier_parameter[k].data.mul_(decay).add_(classifier_parameter[k].data, alpha=1.0 - decay)
 
         # batchnorm layer has running stat buffer
         # dict(model.named_buffers())
@@ -227,8 +222,8 @@ class LatentDiffusionTrainer(BaseTrainer):
             'step': self.step,
             'encoder': self.encoder.state_dict(),
             'decoder': self.decoder.state_dict(),
-            'latent_denoise_fn': self.latent_denoise_fn_without_ddp.state_dict(),
-            'ema_latent_denoise_fn': self.ema_latent_denoise_fn.state_dict(),
+            'classifier': self.classifier_without_ddp.state_dict(),
+            'ema_classifier': self.ema_classifier.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'scaler': self.scaler.state_dict()
         }
@@ -242,8 +237,8 @@ class LatentDiffusionTrainer(BaseTrainer):
         self.step = data['step']
         self.encoder.load_state_dict(data['encoder'])
         self.decoder.load_state_dict(data['decoder'])
-        self.latent_denoise_fn_without_ddp.load_state_dict(data['latent_denoise_fn'])
-        self.ema_latent_denoise_fn.load_state_dict(data['ema_latent_denoise_fn'])
+        self.classifier_without_ddp.load_state_dict(data['classifier'])
+        self.ema_classifier.load_state_dict(data['ema_classifier'])
         self.optimizer.load_state_dict(data['optimizer'])
         self.scaler.load_state_dict(data['scaler'])
 
@@ -268,5 +263,5 @@ if __name__ == '__main__':
     parser.add_argument('--resume', type=str, default='', help='resume from checkpoint')
 
     args = parser.parse_args()
-    runner = LatentDiffusionTrainer(args)
+    runner = ManipulationTrainer(args)
     runner.train()

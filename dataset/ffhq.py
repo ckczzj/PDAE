@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from utils import open_lmdb
+from utils.utils import open_lmdb
 
 class FFHQ(Dataset):
     def __init__(self, config):
@@ -18,14 +18,14 @@ class FFHQ(Dataset):
 
         if self.augmentation:
             self.transform = transforms.Compose([
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ])
         else:
             self.transform = transforms.Compose([
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ])

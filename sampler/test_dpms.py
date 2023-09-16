@@ -1,11 +1,11 @@
 import sys
-sys.path.append("../")
+sys.path.append("./")
 
 import torch
 
-from model.diffusion import GaussianDiffusion
+from diffusion.gaussian_diffusion import GaussianDiffusion
 from model.unet import UNet
-from utils import load_yaml, move_to_cuda, save_image
+from utils.utils import load_yaml, move_to_cuda, save_image
 
 device = "cuda:0"
 torch.cuda.set_device(device)
@@ -14,12 +14,10 @@ config = {
     "diffusion_config" : {
         "timesteps": 1000,
         "betas_type": "linear",
-        "linear_beta_start": 0.0001,
-        "linear_beta_end": 0.02
     },
 
-    "config_path": "../pre-trained-dpms/ffhq128/config.yml",
-    "checkpoint_path": "../pre-trained-dpms/ffhq128/checkpoint.pt",
+    "config_path": "./pre-trained-dpms/ffhq128/config.yml",
+    "checkpoint_path": "./pre-trained-dpms/ffhq128/checkpoint.pt",
 
     "image_channel": 3,
     "image_size": 128,
@@ -48,4 +46,4 @@ with torch.inference_mode():
 
     save_image(samples, "./test_dpms_result.png")
 
-# CUDA_VISIBLE_DEVICES=0 python3 test_dpms.py
+# CUDA_VISIBLE_DEVICES=0 python3 sampler/test_dpms.py

@@ -4,45 +4,45 @@ train_dataset_config:
   image_size: 128
   image_channel: 3
   latent_dim: &latent_dim 512
-  augmentation: True
+  augmentation: False
 eval_dataset_config:
   augmentation: False
 
-diffusion_config:
-  timesteps: 1000
-  betas_type: "linear"
-
 trained_ddpm_config: "./pre-trained-dpms/ffhq128/config.yml"
-trained_ddpm_checkpoint: "./pre-trained-dpms/ffhq128/checkpoint.pt"
+trained_representation_learning_config: "./trained-models/autoencoder/ffhq128/config.yml"
+trained_representation_learning_checkpoint: "./trained-models/autoencoder/ffhq128/checkpoint.pt"
+inferred_latents: "./trained-models/latents/ffhq.pt"
 
-encoder_config:
-  model: "FFHQEncoder"
-  latent_dim: *latent_dim
-
-decoder_config:
-  model: "FFHQDecoder"
-  latent_dim: *latent_dim
+latent_denoise_fn_config:
+  model: "FFHQLatentDenoiseFn"
+  input_channel: *latent_dim
+  model_channel: 2048
+  num_layers: 10
+  time_emb_channel: 64
+  use_norm: True
+  dropout: 0.0
 
 dataloader_config:
   train:
     num_workers: 4
-    batch_size: 32 # batch_size for each process
+    batch_size: 128 # batch_size for each process
   eval:
     num_generations: 36 # showing a 6x6 image grid in tensorboard
 
 optimizer_config:
-  lr: 1e-4
+  name: "AdamW"
+  lr: 1e-3
   adam_betas: (0.9, 0.999)
   adam_eps: 1e-8
-  weight_decay: 0.0
+  weight_decay: 0.01
   enable_amp: False
 
 runner_config:
   display_steps: 100
-  evaluate_every_steps: 5000
+  evaluate_every_steps: 10000
   save_latest_every_steps: 1000
   save_checkpoint_every_steps: 10000
-  num_iterations: 1
   ema_every: 1
   ema_decay: 0.9999
+  num_iterations: 1
   compile: False

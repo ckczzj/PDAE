@@ -1,3 +1,3 @@
-from ..unet import UNet
+from model.unet import UNet
 
 MNISTDenoiseFn = UNet

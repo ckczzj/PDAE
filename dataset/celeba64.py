@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import torchvision.transforms.functional as F
 
-from utils import open_lmdb
+from utils.utils import open_lmdb
 
 class CropCelebA64(object):
     def __call__(self, img):
@@ -26,7 +26,7 @@ class CELEBA64(Dataset):
         if self.augmentation:
             self.transform = transforms.Compose([
                 CropCelebA64(),
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,), (0.5,), inplace=True)
@@ -34,7 +34,7 @@ class CELEBA64(Dataset):
         else:
             self.transform = transforms.Compose([
                 CropCelebA64(),
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,), (0.5,), inplace=True)
             ])

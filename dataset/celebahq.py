@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from utils import open_lmdb
+from utils.utils import open_lmdb
 
 
 class CELEBAHQ(Dataset):
@@ -21,14 +21,14 @@ class CELEBAHQ(Dataset):
 
         if self.augmentation:
             self.transform = transforms.Compose([
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,), (0.5,), inplace=True)
             ])
         else:
             self.transform = transforms.Compose([
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
                 transforms.ToTensor(),  # 0 ~ 1
                 transforms.Normalize((0.5,), (0.5,), inplace=True)
             ])

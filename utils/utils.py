@@ -1,33 +1,32 @@
-import datetime
+import os
 import pickle
 import random
 import textwrap
 import time
-from math import sqrt, ceil, exp
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
+
 import yaml
 import json
-from PIL import Image
 import lmdb
+from PIL import Image
 
 
+def init_distributed_mode(args):
+    args.global_rank = int(os.environ["RANK"])
+    args.global_world_size = int(os.environ['WORLD_SIZE'])
+    args.local_rank = int(os.environ['LOCAL_RANK'])
+    args.local_world_size = int(os.environ['LOCAL_WORLD_SIZE'])
 
-def init_process(init_method=None, rank=-1, world_size=-1):
-    torch.distributed.init_process_group(
-        backend="nccl",
-        init_method=init_method,
-        rank=rank,
-        world_size=world_size,
-        timeout=datetime.timedelta(0, 120),  # 120 seconds
-    )
+    torch.distributed.init_process_group(backend="nccl")
+    torch.distributed.barrier()
     assert torch.distributed.is_initialized()
-    print('process {}/{} initialized.'.format(rank + 1, world_size))
-
+    print('DDP initialized as global_rank {}/{}, local_rank {}/{}'.format(args.global_rank, args.global_world_size, args.local_rank, args.local_world_size), flush=True)
 
 # base_seed should be large enough to keep 0 and 1 bits balanced
 def set_seed(inc, base_seed=666666666):
@@ -37,23 +36,18 @@ def set_seed(inc, base_seed=666666666):
     torch.manual_seed(seed + 2)
     torch.cuda.manual_seed(seed + 3)
 
-
 # torchvision.transforms may use python RNG
 # avoid different workers having same seed
 class set_worker_seed_builder():
-    def __init__(self, rank):
-        self.rank = rank
+    def __init__(self, global_rank):
+        self.global_rank = global_rank
 
     def __call__(self, worker_id):
         # use time to avoid same seed when restoring
         # based on seconds, will be almost same for different processes
         base_seed = int(time.time()) % 88888888
-        worker_seed = base_seed + worker_id * 1024 + self.rank * 1024 * 1024
-        random.seed(worker_seed)
-        np.random.seed(worker_seed + 1)
-        torch.manual_seed(worker_seed + 2)
-        torch.cuda.manual_seed(worker_seed + 3)
-
+        inc = self.global_rank * 128 * 128 + worker_id * 128
+        set_seed(inc, base_seed)
 
 def load_pickle(filename):
     with open(filename, 'rb') as f:
@@ -90,7 +84,6 @@ def open_lmdb(path):
 def get_one_hot(label, N):
     size=list(label.size())
     size.append(N)
-
     ones=torch.eye(N) # one-hot to be selected
     label=label.view(-1)
     output=ones.index_select(0,label)
@@ -101,10 +94,10 @@ def save_image(images, save_path, captions=None, gts=None, masked_gts=None, num_
     figure = plt.figure(figsize=(20, 20))
     num_images = images.shape[0]
     if num_cols is None:
-        num_rows = ceil(sqrt(num_images))
-        num_cols = ceil(num_images / num_rows)
+        num_rows = math.ceil(math.sqrt(num_images))
+        num_cols = math.ceil(num_images / num_rows)
     else:
-        num_rows = ceil(num_images / num_cols)
+        num_rows = math.ceil(num_images / num_cols)
 
     num_channels = images.shape[-1]
     assert images.shape[1] == images.shape[2]
@@ -186,9 +179,8 @@ def apply_to_sample(f, sample):
 
     return _apply(sample)
 
-
 def gaussian(window_size, sigma):
-    gauss = torch.Tensor([exp(-(x - window_size // 2)**2 / float(2 * sigma**2)) for x in range(window_size)])
+    gauss = torch.Tensor([math.exp(-(x - window_size // 2)**2 / float(2 * sigma**2)) for x in range(window_size)])
     return gauss / gauss.sum()
 
 def create_window(window_size, channel):
@@ -227,37 +219,3 @@ def calculate_lpips(img1, img2, lpips_fn):
 
 def calculate_mse(img1, img2):
     return (img1 - img2).pow(2).mean(dim=[1, 2, 3])
-
-
-# def space_timesteps(num_timesteps, section_counts):
-#     if isinstance(section_counts, str):
-#         if section_counts.startswith("ddim"):
-#             desired_count = int(section_counts[len("ddim"):])
-#             for i in range(1, num_timesteps):
-#                 if len(range(0, num_timesteps, i)) == desired_count:
-#                     return set(range(0, num_timesteps, i))
-#             raise ValueError(
-#                 f"cannot create exactly {num_timesteps} steps with an integer stride"
-#             )
-#         section_counts = [int(x) for x in section_counts.split(",")]
-#     size_per = num_timesteps // len(section_counts)
-#     extra = num_timesteps % len(section_counts)
-#     start_idx = 0
-#     all_steps = []
-#     for i, section_count in enumerate(section_counts):
-#         size = size_per + (1 if i < extra else 0)
-#         if size < section_count:
-#             raise ValueError(
-#                 f"cannot divide section of {size} steps into {section_count}")
-#         if section_count <= 1:
-#             frac_stride = 1
-#         else:
-#             frac_stride = (size - 1) / (section_count - 1)
-#         cur_idx = 0.0
-#         taken_steps = []
-#         for _ in range(section_count):
-#             taken_steps.append(start_idx + round(cur_idx))
-#             cur_idx += frac_stride
-#         all_steps += taken_steps
-#         start_idx += size
-#     return set(all_steps)

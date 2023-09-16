@@ -1,27 +1,29 @@
 import sys
-sys.path.append("../")
+sys.path.append("./")
 
 import torch
 from torch.utils.data import DataLoader
 
 import dataset as dataset_module
-from model.diffusion import GaussianDiffusion
-import model.representation.encoder as encoder_module
+from diffusion.gaussian_diffusion import GaussianDiffusion
+import model.representation_learning.encoder as encoder_module
 
-from utils import load_yaml, move_to_cuda
+from utils.utils import load_yaml, move_to_cuda
 
 device = "cuda:0"
 torch.cuda.set_device(device)
 
 config = {
-    "config_path": "../trained-models/autoencoder/ffhq128/config.yml",
-    "checkpoint_path": "../trained-models/autoencoder/ffhq128/checkpoint.pt",
+    "config_path": "./trained-models/autoencoder/ffhq128/config.yml",
+    "checkpoint_path": "./trained-models/autoencoder/ffhq128/checkpoint.pt",
 
-    "dataset_name": "CELEBAHQ",
-    "data_path": "../data/celebahq",
-    "image_channel": 3,
-    "image_size": 128,
-    "augmentation": False,
+    "dataset_config": {
+        "dataset_name": "CELEBAHQ",
+        "data_path": "./data/celebahq",
+        "image_channel": 3,
+        "image_size": 128,
+        "augmentation": False,
+    },
 }
 
 config_path = config["config_path"]
@@ -34,13 +36,9 @@ encoder.load_state_dict(checkpoint['ema_encoder'])
 encoder = encoder.cuda()
 encoder.eval()
 
-
-dataset_name = config["dataset_name"]
-data_path = config["data_path"]
-image_size = config["image_size"]
-image_channel = config["image_channel"]
-augmentation = config["augmentation"]
-dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
+dataset_config = config["dataset_config"]
+dataset_name = dataset_config["dataset_name"]
+dataset = getattr(dataset_module, dataset_config["dataset_name"], None)(dataset_config)
 
 dataloader = DataLoader(dataset, shuffle=False, collate_fn=dataset.collate_fn, num_workers=0, batch_size=1000)
 
@@ -57,4 +55,4 @@ with torch.inference_mode():
 
     torch.save({"mean": latent.mean(0), "std":latent.std(0)}, "./"+ dataset_name.lower() + ".pt")
 
-# CUDA_VISIBLE_DEVICES=0 python3 infer_latents.py
+# CUDA_VISIBLE_DEVICES=0 python3 sampler/infer_latents.py

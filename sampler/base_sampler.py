@@ -2,34 +2,32 @@ from abc import ABC, abstractmethod
 
 import torch
 
-from utils import set_seed
+from utils.utils import load_yaml, set_seed, init_distributed_mode
 
 class BaseSampler(ABC):
-    def __init__(self, config, distributed_meta_info):
+    def __init__(self, args):
         super().__init__()
+        init_distributed_mode(args)
 
-        self.config = config
-        self.distributed_meta_info = distributed_meta_info
+        self.config = args.config
 
-        self.rank = self.distributed_meta_info["rank"]
-        assert self.rank == torch.distributed.get_rank()
-        self.world_size = self.distributed_meta_info["world_size"]
-        assert self.world_size == torch.distributed.get_world_size()
-
-        self.device = torch.device('cuda:{}'.format(self.rank))
+        self.global_rank = args.global_rank
+        self.global_world_size = args.global_world_size
+        self.local_rank = args.local_rank
+        self.device = torch.device('cuda:{}'.format(self.local_rank))
         torch.cuda.set_device(self.device)
 
         self._build_everything()
 
         # after building model, set different seed for different ranks for training or sampling with different noise
-        set_seed(self.rank)
+        set_seed(self.global_rank)
         torch.distributed.barrier()
 
     def _build_everything(self):
         self._build_dataloader()
-        print('rank{}: dataloader built.'.format(self.rank))
+        print('rank{}: dataloader built.'.format(self.global_rank))
         self._build_model()
-        print('rank{}: model built.'.format(self.rank))
+        print('rank{}: model built.'.format(self.global_rank))
 
     @abstractmethod
     def _build_dataloader(self):
@@ -53,6 +51,6 @@ class BaseSampler(ABC):
 
     # return a list of data from all ranks
     def gather_data(self, data):
-        gather_data = [None for _ in range(self.world_size)]
+        gather_data = [None for _ in range(self.global_world_size)]
         torch.distributed.all_gather_object(gather_data, data)
         return gather_data

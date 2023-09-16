@@ -4,7 +4,7 @@ import torchvision
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from utils import get_one_hot
+from utils.utils import get_one_hot
 
 class MNIST(Dataset):
     def __init__(self, config):
@@ -16,7 +16,7 @@ class MNIST(Dataset):
         self.train = self.config["train"]
 
         transform = transforms.Compose([
-            transforms.Resize(self.image_size),
+            transforms.Resize((self.image_size,self.image_size)),
             transforms.ToTensor(),  # 0 ~ 1
             transforms.Normalize((0.5,), (0.5,), inplace=True),  # -1 ~ 1
         ])

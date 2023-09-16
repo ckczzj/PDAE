@@ -1,6 +1,6 @@
 train_dataset_config:
   name: "MNIST"
-  data_path: "../data/mnist"
+  data_path: "./data/mnist"
   image_size: 32
   image_channel: &image_channel 1
   train: True
@@ -10,8 +10,6 @@ eval_dataset_config:
 diffusion_config:
   timesteps: 1000
   betas_type: "linear"
-  linear_beta_start: 0.0001
-  linear_beta_end: 0.02
 
 denoise_fn_config:
   model: "MNISTDenoiseFn"
@@ -30,9 +28,11 @@ denoise_fn_config:
   head_channel: -1 # if head_channel==-1 then num_heads=num_heads, else num_heads=(multiplier*base_channel)//head_channel
 
 dataloader_config:
-  num_workers: 2
-  batch_size: 128
-  drop_last: True
+  train:
+    num_workers: 4
+    batch_size: 32 # batch_size for each process
+  eval:
+    num_generations: 36 # showing a 6x6 image grid in tensorboard
 
 optimizer_config:
   lr: 1e-4
@@ -42,10 +42,11 @@ optimizer_config:
   enable_amp: False
 
 runner_config:
+  display_steps: 100
   evaluate_every_steps: 5000
   save_latest_every_steps: 1000
   save_checkpoint_every_steps: 10000
   num_iterations: 1
   ema_every: 1
   ema_decay: 0.9999
-  run_base_path: "../runs"
+  compile: False

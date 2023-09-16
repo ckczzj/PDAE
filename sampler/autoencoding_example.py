@@ -1,27 +1,30 @@
 import sys
-sys.path.append("../")
+sys.path.append("./")
 
 from PIL import Image
 import torch
 
 import dataset as dataset_module
-from model.diffusion import GaussianDiffusion
-import model.representation.encoder as encoder_module
-import model.representation.decoder as decoder_module
-from utils import load_yaml, move_to_cuda
+from diffusion.gaussian_diffusion import GaussianDiffusion
+import model.representation_learning.encoder as encoder_module
+import model.representation_learning.decoder as decoder_module
+from utils.utils import load_yaml, move_to_cuda
 
 device = "cuda:0"
 torch.cuda.set_device(device)
 
 config = {
-    "config_path": "../trained-models/autoencoder/celebahq128/config.yml",
-    "checkpoint_path": "../trained-models/autoencoder/celebahq128/checkpoint.pt",
+    "config_path": "./trained-models/autoencoder/celebahq128/config.yml",
+    "checkpoint_path": "./trained-models/autoencoder/celebahq128/checkpoint.pt",
+    "trained_ddpm_config_path": "./pre-trained-dpms/celebahq128/config.yml",
 
-    "dataset_name": "CELEBAHQ",
-    "data_path": "../data/celebahq",
-    "image_channel": 3,
-    "image_size": 128,
-    "augmentation": False,
+    "dataset_config": {
+        "dataset_name": "CELEBAHQ",
+        "data_path": "./data/celebahq",
+        "image_channel": 3,
+        "image_size": 128,
+        "augmentation": False,
+    },
 
     "image_index": 29506,
 }
@@ -31,7 +34,7 @@ checkpoint_path = config["checkpoint_path"]
 model_config = load_yaml(config_path)
 gaussian_diffusion = GaussianDiffusion(model_config["diffusion_config"], device=device)
 encoder = getattr(encoder_module, model_config["encoder_config"]["model"], None)(**model_config["encoder_config"])
-trained_ddpm_config = load_yaml(model_config["trained_ddpm_config"])
+trained_ddpm_config = load_yaml(config["trained_ddpm_config_path"])
 decoder = getattr(decoder_module, model_config["decoder_config"]["model"], None)(latent_dim=model_config["decoder_config"]["latent_dim"], **trained_ddpm_config["denoise_fn_config"])
 checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
 encoder.load_state_dict(checkpoint['ema_encoder'])
@@ -41,12 +44,9 @@ encoder.eval()
 decoder = decoder.cuda()
 decoder.eval()
 
-dataset_name = config["dataset_name"]
-data_path = config["data_path"]
-image_size = config["image_size"]
-image_channel = config["image_channel"]
-augmentation = config["augmentation"]
-dataset = getattr(dataset_module, dataset_name, None)({"data_path": data_path, "image_size": image_size, "image_channel": image_channel, "augmentation": augmentation})
+dataset_config = config["dataset_config"]
+image_size = dataset_config["image_size"]
+dataset = getattr(dataset_module, dataset_config["dataset_name"], None)(dataset_config)
 
 image_index = config["image_index"]
 
@@ -82,4 +82,4 @@ with torch.inference_mode():
 
     merge.save("./autoencoding_example_result.png")
 
-# CUDA_VISIBLE_DEVICES=0 python3 autoencoding_example.py
+# CUDA_VISIBLE_DEVICES=0 python3 sampler/autoencoding_example.py
