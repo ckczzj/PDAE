@@ -58,8 +58,7 @@ You should put download in the root dicretory of this project and maintain their
 To train DDPM, run this command:
 
 ```
-cd ./trainer
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_regular.py --world_size 4
+bash scripts/dist_train_regular_diffusion.sh 1 0 4
 ```
 
 
@@ -67,8 +66,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_regular.py --world_size 4
 To train PDAE, run this command:
 
 ```
-cd ./trainer
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_representation_learning.py --world_size 4
+bash scripts/dist_train_representation_learning.sh 1 0 4
 ```
 
 
@@ -76,8 +74,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_representation_learning.py --world_si
 To train a classifier for manipulation, run this command:
 
 ```
-cd ./trainer
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_manipulation_diffusion.py --world_size 4
+bash scripts/dist_train_manipulation.sh 1 0 4
 ```
 
 
@@ -85,21 +82,19 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_manipulation_diffusion.py --world_siz
 To train a latent DPM, run this command:
 
 ```
-cd ./trainer
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 train_latent_diffusion.py --world_size 4
+bash scripts/dist_train_latent_diffusion.sh 1 0 4
 ```
 
 
 
-You can change the config file and run path in the python file.
+You can change the config file and run path in the script file.
 
 
 
 ## Evaluation
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0 python3 autoencoding_example.py
+CUDA_VISIBLE_DEVICES=0 python3 sampler/autoencoding_example.py
 ```
 
 <div align=center><img src="./images/autoencoding_example_result.png" height="60"/></div>
@@ -107,8 +102,7 @@ CUDA_VISIBLE_DEVICES=0 python3 autoencoding_example.py
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 autoencoding_eval.py --world_size 4
+bash scripts/dist_sample.sh 1 0 4
 ```
 
 PDAE achieves autoencoding reconstruction **SOTA** performance of **SSIM(0.994)** and **MSE(3.84e-5)** when using inferred $x_{T}$.
@@ -117,8 +111,7 @@ PDAE achieves autoencoding reconstruction **SOTA** performance of **SSIM(0.994)*
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0 python3 denoise_one_step.py
+CUDA_VISIBLE_DEVICES=0 python3 sampler/denoise_one_step.py
 ```
 
 <div align=center><img src="./images/denoise_one_step_result.png" height="120"/></div>
@@ -127,8 +120,8 @@ CUDA_VISIBLE_DEVICES=0 python3 denoise_one_step.py
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 gap_measure.py --world_size 4
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 4
 ```
 
 <div align=center><img src="./images/gap_measure_result.png" height="300"/></div>
@@ -137,8 +130,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python3 gap_measure.py --world_size 4
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0 python3 interpolation.py
+CUDA_VISIBLE_DEVICES=0 python3 sampler/interpolation.py
 ```
 
 <div align=center><img src="./images/interpolation_result.png" height="120"/></div>
@@ -147,8 +139,7 @@ CUDA_VISIBLE_DEVICES=0 python3 interpolation.py
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0 python3 manipulation.py
+CUDA_VISIBLE_DEVICES=0 python3 sampler/manipulation.py
 ```
 
 <div align=center><img src="./images/manipulation_result.png" height="60"/></div>
@@ -156,8 +147,8 @@ CUDA_VISIBLE_DEVICES=0 python3 manipulation.py
 
 
 ```
-cd ./sampler
-CUDA_VISIBLE_DEVICES=0,1,2,3 python3 unconditional_sample.py --world_size 4
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 4
 ```
 
 <div align=center><img src="./images/unconditional_sample_result.png" height="400"/></div>
