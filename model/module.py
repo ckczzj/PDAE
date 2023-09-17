@@ -58,7 +58,7 @@ def normalization(channels):
     Make a standard normalization layer.
 
     :param channels: number of input channels.
-    :return: an nn.Module for normalization.
+    :return: a nn.Module for normalization.
     """
     return nn.GroupNorm(32, channels)
 
@@ -430,7 +430,7 @@ class AttentionBlock(nn.Module):
 
 class QKVAttentionLegacy(nn.Module):
     """
-    A module which performs QKV attention. Matches legacy QKVAttention + input/ouput heads shaping
+    A module which performs QKV attention. Matches legacy QKVAttention + input/output heads shaping
     """
 
     def __init__(self, n_heads):
