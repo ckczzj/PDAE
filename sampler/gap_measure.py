@@ -75,7 +75,7 @@ class Sampler(BaseSampler):
         autoencoder_posterior_mean_gap_list = []
         with torch.inference_mode():
             for batch in self.dataloader:
-                x_0 = move_to_cuda(batch["net_input"]["x_0"])
+                x_0 = move_to_cuda(batch["x_0"])
                 predicted_posterior_mean_gap, autoencoder_posterior_mean_gap = self.gaussian_diffusion.representation_learning_gap_measure(self.encoder, self.decoder, x_0)
                 predicted_posterior_mean_gap_list.append(predicted_posterior_mean_gap)
                 autoencoder_posterior_mean_gap_list.append(autoencoder_posterior_mean_gap)
@@ -103,7 +103,6 @@ class Sampler(BaseSampler):
                 plt.ylabel("MSE")
                 plt.savefig("./gap_measure_result.png", dpi=600)
                 plt.close()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

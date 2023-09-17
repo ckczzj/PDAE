@@ -96,7 +96,7 @@ class RepresentationLearningTrainer(BaseTrainer):
                     output = self.gaussian_diffusion.representation_learning_train_one_batch(
                         encoder=self.encoder,
                         decoder=self.decoder,
-                        x_0=move_to_cuda(batch["net_input"]["x_0"])
+                        x_0=move_to_cuda(batch["x_0"])
                     )
                     # torch.distributed.barrier()   CUDA operations are executed asynchronously, the timing will be accumulated in the next synchronizing operation
                     time_meter['forward'] += (time.time_ns() - start_time) / 1e9
@@ -167,8 +167,8 @@ class RepresentationLearningTrainer(BaseTrainer):
                     ddim_style=f'ddim100',
                     encoder=self.ema_encoder,
                     decoder=self.ema_decoder,
-                    x_0=move_to_cuda(batch["net_input"]["x_0"]),
-                    x_T=move_to_cuda(batch["net_input"]["x_T"]),
+                    x_0=move_to_cuda(batch["x_0"]),
+                    x_T=move_to_cuda(torch.randn_like(batch["x_0"])),
                 )
                 images = images.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
                 images = images.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()

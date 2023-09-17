@@ -34,7 +34,6 @@ class MNIST(Dataset):
             "index": index,
             "gt": gt,
             "x_0": image,
-            "x_T": torch.randn(self.image_channel, self.image_size, self.image_size),
             "label": torch.tensor(label),
             "caption": str(int(label))
         }
@@ -45,31 +44,26 @@ class MNIST(Dataset):
     def collate_fn(batch):
         batch_size = len(batch)
 
-        indices = []
-        gts = []
-        x_0 = []
-        x_T = []
+        idx=[]
+        x_0=[]
+        gt=[]
         label = []
+
         for i in range(batch_size):
-            indices.append(batch[i]["index"])
-            gts.append(batch[i]["gt"])
+            idx.append(batch[i]["index"])
             x_0.append(batch[i]["x_0"])
-            x_T.append(batch[i]["x_T"])
+            gt.append(batch[i]["gt"])
             label.append(batch[i]["label"])
 
         x_0 = torch.stack(x_0, dim=0)
-        x_T = torch.stack(x_T, dim=0)
         label = torch.stack(label, dim=0)
         condition = get_one_hot(label, 10)
 
-
         return {
-            "net_input": {
-                "x_0": x_0,
-                "x_T": x_T,
-                "condition": condition,
-            },
-            "gts": np.asarray(gts),
+            "idx": idx,
+            "x_0": x_0,
+            "gts": np.asarray(gt),
+            "condition": condition,
             "label": label,
             "captions": [s["caption"] for s in batch]
         }

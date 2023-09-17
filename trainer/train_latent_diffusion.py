@@ -118,7 +118,7 @@ class LatentDiffusionTrainer(BaseTrainer):
                     output = self.gaussian_diffusion.latent_diffusion_train_one_batch(
                         latent_denoise_fn=self.latent_denoise_fn,
                         encoder=self.encoder,
-                        x_0=move_to_cuda(batch["net_input"]["x_0"]),
+                        x_0=move_to_cuda(batch["x_0"]),
                         latents_mean=self.latents_mean,
                         latents_std=self.latents_std,
                     )
@@ -189,7 +189,7 @@ class LatentDiffusionTrainer(BaseTrainer):
                     decoder_ddim_style=f'ddim100',
                     latent_denoise_fn=self.ema_latent_denoise_fn,
                     decoder=self.decoder,
-                    x_T=move_to_cuda(batch["net_input"]["x_T"]),
+                    x_T=move_to_cuda(torch.randn_like(batch["x_0"])),
                     latents_mean=self.latents_mean,
                     latents_std=self.latents_std,
                 )

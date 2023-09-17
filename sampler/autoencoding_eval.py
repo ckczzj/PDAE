@@ -2,7 +2,6 @@ import copy
 import argparse
 import numpy as np
 import torch
-from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader
 
 import lpips
@@ -13,7 +12,7 @@ import model.representation_learning.encoder as encoder_module
 import model.representation_learning.decoder as decoder_module
 from utils.utils import load_yaml, move_to_cuda, calculate_ssim, calculate_lpips, calculate_mse, set_worker_seed_builder
 
-from base_sampler import BaseSampler
+from sampler.base_sampler import BaseSampler
 
 class Sampler(BaseSampler):
     def __init__(self, args):
@@ -75,7 +74,7 @@ class Sampler(BaseSampler):
 
         with torch.inference_mode():
             for batch in self.dataloader:
-                x_0 = move_to_cuda(batch["net_input"]["x_0"])
+                x_0 = move_to_cuda(batch["x_0"])
 
                 # inferred x_T
                 reconstruction = self.gaussian_diffusion.representation_learning_autoencoding(f'ddim1000', f'ddim100', self.encoder, self.decoder, x_0)

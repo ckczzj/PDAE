@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import torch
 
-from utils.utils import load_yaml, set_seed, init_distributed_mode
+from utils.utils import set_seed, init_distributed_mode
 
 class BaseSampler(ABC):
     def __init__(self, args):

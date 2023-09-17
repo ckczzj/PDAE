@@ -103,8 +103,8 @@ class ManipulationTrainer(BaseTrainer):
                     output = self.gaussian_diffusion.manipulation_train_one_batch(
                         classifier=self.classifier,
                         encoder=self.encoder,
-                        x_0=move_to_cuda(batch["net_input"]["x_0"]),
-                        label=move_to_cuda(batch["net_input"]["label"]),
+                        x_0=move_to_cuda(batch["x_0"]),
+                        label=move_to_cuda(batch["label"]),
                         latents_mean=move_to_cuda(self.latents_mean),
                         latents_std=move_to_cuda(self.latents_std),
                     )
@@ -170,7 +170,7 @@ class ManipulationTrainer(BaseTrainer):
             self.eval_sampler.set_epoch(self.step)
 
             for batch in self.eval_dataloader:
-                x_0 = move_to_cuda(batch["net_input"]["x_0"])
+                x_0 = move_to_cuda(batch["x_0"])
                 inferred_x_T = self.gaussian_diffusion.representation_learning_ddim_encode(f'ddim500', self.encoder, self.decoder, x_0)
                 images = self.gaussian_diffusion.manipulation_sample(
                     classifier_weight=self.ema_classifier.weight,

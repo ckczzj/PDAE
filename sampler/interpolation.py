@@ -1,5 +1,4 @@
-import sys
-sys.path.append("./")
+import argparse
 
 from PIL import Image
 import torch
@@ -10,107 +9,120 @@ import model.representation_learning.encoder as encoder_module
 import model.representation_learning.decoder as decoder_module
 from utils.utils import load_yaml, move_to_cuda
 
-device = "cuda:0"
-torch.cuda.set_device(device)
+from sampler.base_sampler import BaseSampler
 
-config = {
-    "config_path": "./trained-models/autoencoder/celebahq128/config.yml",
-    "checkpoint_path": "./trained-models/autoencoder/celebahq128/checkpoint.pt",
-    "trained_ddpm_config_path": "./pre-trained-dpms/celebahq128/config.yml",
+class Sampler(BaseSampler):
+    def __init__(self, args):
+        super().__init__(args)
+        print('rank{}: sampler initialized.'.format(self.global_rank))
 
-    "dataset_config": {
-        "dataset_name": "CELEBAHQ",
-        "data_path": "./data/celebahq",
-        "image_channel": 3,
-        "image_size": 128,
-        "augmentation": False,
-    },
+    def _build_dataloader(self):
+        pass
 
-    "image_index_1": 17570,
-    "image_index_2": 23404,
-}
+    def _build_model(self):
+        config_path = self.config["config_path"]
+        checkpoint_path = self.config["checkpoint_path"]
+        model_config = load_yaml(config_path)
+        self.gaussian_diffusion = GaussianDiffusion(model_config["diffusion_config"], device=self.device)
+        self.encoder = getattr(encoder_module, model_config["encoder_config"]["model"], None)(**model_config["encoder_config"])
+        trained_ddpm_config = load_yaml(self.config["trained_ddpm_config_path"])
+        self.decoder = getattr(decoder_module, model_config["decoder_config"]["model"], None)(latent_dim=model_config["decoder_config"]["latent_dim"], **trained_ddpm_config["denoise_fn_config"])
+        checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        self.encoder.load_state_dict(checkpoint['ema_encoder'])
+        self.decoder.load_state_dict(checkpoint['ema_decoder'])
+        self.encoder = self.encoder.cuda()
+        self.encoder.eval()
+        self.decoder = self.decoder.cuda()
+        self.decoder.eval()
 
-config_path = config["config_path"]
-checkpoint_path = config["checkpoint_path"]
-model_config = load_yaml(config_path)
-gaussian_diffusion = GaussianDiffusion(model_config["diffusion_config"], device=device)
-encoder = getattr(encoder_module, model_config["encoder_config"]["model"], None)(**model_config["encoder_config"])
-trained_ddpm_config = load_yaml(config["trained_ddpm_config_path"])
-decoder = getattr(decoder_module, model_config["decoder_config"]["model"], None)(latent_dim=model_config["decoder_config"]["latent_dim"], **trained_ddpm_config["denoise_fn_config"])
-checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
-encoder.load_state_dict(checkpoint['ema_encoder'])
-decoder.load_state_dict(checkpoint['ema_decoder'])
-encoder = encoder.cuda()
-encoder.eval()
-decoder = decoder.cuda()
-decoder.eval()
+    def calculate_theta(self, a, b):
+        return torch.arccos(torch.dot(a.view(-1), b.view(-1)) / (torch.norm(a) * torch.norm(b)))
 
-dataset_config = config["dataset_config"]
-image_size = dataset_config["image_size"]
-dataset = getattr(dataset_module, dataset_config["dataset_name"], None)(dataset_config)
+    def slerp(self, a, b, alpha):
+        theta = self.calculate_theta(a, b)
+        sin_theta = torch.sin(theta)
+        return a * torch.sin((1.0 - alpha) * theta) / sin_theta + b * torch.sin(alpha * theta) / sin_theta
 
-def calculate_theta(a,b):
-    return torch.arccos(torch.dot(a.view(-1),b.view(-1))/(torch.norm(a)*torch.norm(b)))
+    def lerp(self, a, b, alpha):
+        return (1.0 - alpha) * a + alpha * b
 
-def slerp(a,b,alpha):
-    theta = calculate_theta(a,b)
-    sin_theta = torch.sin(theta)
-    return a * torch.sin((1.0 - alpha)*theta) / sin_theta + b * torch.sin(alpha * theta) / sin_theta
+    def start(self):
+        dataset_config = self.config["dataset_config"]
+        image_size = dataset_config["image_size"]
+        dataset = getattr(dataset_module, dataset_config["dataset_name"], None)(dataset_config)
 
-def lerp(a,b,alpha):
-    return (1.0 - alpha) * a + alpha * b
+        image_index_1 = self.config["image_index_1"]
+        image_index_2 = self.config["image_index_2"]
 
+        with torch.inference_mode():
+            data_1 = dataset.__getitem__(image_index_1)
+            x_0_1 = move_to_cuda(data_1["x_0"]).unsqueeze(0)
+            gt_1 = data_1["gt"]
 
-image_index_1 = config["image_index_1"]
-image_index_2 = config["image_index_2"]
+            data_2 = dataset.__getitem__(image_index_2)
+            x_0_2 = move_to_cuda(data_2["x_0"]).unsqueeze(0)
+            gt_2 = data_2["gt"]
 
-with torch.inference_mode():
-    data_1 = dataset.__getitem__(image_index_1)
-    x_0_1 = move_to_cuda(data_1["x_0"]).unsqueeze(0)
-    gt_1 = data_1["gt"]
+            z = self.encoder(torch.cat([x_0_1, x_0_2], dim=0))
+            x_T = self.gaussian_diffusion.representation_learning_ddim_encode(
+                f'ddim100',
+                self.encoder,
+                self.decoder,
+                torch.cat([x_0_1, x_0_2], dim=0),
+                z
+            )
 
-    data_2 = dataset.__getitem__(image_index_2)
-    x_0_2 = move_to_cuda(data_2["x_0"]).unsqueeze(0)
-    gt_2 = data_2["gt"]
+            x_T_1 = x_T[0:1]
+            x_T_2 = x_T[1:2]
+            z_1 = z[0:1]
+            z_2 = z[1:2]
 
-    z = encoder(torch.cat([x_0_1, x_0_2], dim=0))
-    x_T = gaussian_diffusion.representation_learning_ddim_encode(
-        f'ddim100',
-        encoder,
-        decoder,
-        torch.cat([x_0_1, x_0_2], dim=0),
-        z
-    )
+            merge = Image.new('RGB', (13 * image_size, 2 * image_size), color=(255, 255, 255))
 
-    x_T_1 = x_T[0:1]
-    x_T_2 = x_T[1:2]
-    z_1 = z[0:1]
-    z_2 = z[1:2]
+            merge.paste(Image.fromarray(gt_1), (0, int(0.5 * image_size)))
+            merge.paste(Image.fromarray(gt_2), (12 * image_size, int(0.5 * image_size)))
 
-    merge = Image.new('RGB', (13 * image_size, 2 * image_size), color=(255, 255, 255))
+            for i, alpha in enumerate([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]):
+                x_T = self.slerp(x_T_1, x_T_2, alpha)
+                z = self.lerp(z_1, z_2, alpha)
 
-    merge.paste(Image.fromarray(gt_1), (0, int(0.5 * image_size)))
-    merge.paste(Image.fromarray(gt_2), (12 * image_size, int(0.5 * image_size)))
+                image = self.gaussian_diffusion.representation_learning_ddim_sample(f'ddim100', None, self.decoder, None, x_T, z)
 
-    for i, alpha in enumerate([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]):
-        x_T = slerp(x_T_1, x_T_2, alpha)
-        z = lerp(z_1, z_2, alpha)
+                image = image.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
+                image = image.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
+                merge.paste(Image.fromarray(image[0]), ((i + 1) * image_size, 0))
 
-        image = gaussian_diffusion.representation_learning_ddim_sample(f'ddim100', None, decoder, None, x_T, z)
+            for i, alpha in enumerate([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]):
+                x_T = self.slerp(x_T_1, x_T_2, alpha)
 
-        image = image.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
-        image = image.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
-        merge.paste(Image.fromarray(image[0]), ((i + 1) * image_size, 0))
+                image = self.gaussian_diffusion.representation_learning_ddim_trajectory_interpolation(f'ddim100', self.decoder, z_1, z_2, x_T, alpha)
 
-    for i, alpha in enumerate([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]):
-        x_T = slerp(x_T_1, x_T_2, alpha)
+                image = image.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
+                image = image.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
+                merge.paste(Image.fromarray(image[0]), ((i + 1) * image_size, image_size))
 
-        image = gaussian_diffusion.representation_learning_ddim_trajectory_interpolation(f'ddim100', decoder, z_1, z_2, x_T, alpha)
+            merge.save("./interpolation_result.png")
 
-        image = image.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
-        image = image.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
-        merge.paste(Image.fromarray(image[0]), ((i + 1) * image_size, image_size))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
 
-    merge.save("./interpolation_result.png")
+    args.config = {
+        "config_path": "./trained-models/autoencoder/celebahq128/config.yml",
+        "checkpoint_path": "./trained-models/autoencoder/celebahq128/checkpoint.pt",
+        "trained_ddpm_config_path": "./pre-trained-dpms/celebahq128/config.yml",
 
-# CUDA_VISIBLE_DEVICES=0 python3 sampler/interpolation.py
+        "dataset_config": {
+            "dataset_name": "CELEBAHQ",
+            "data_path": "./data/celebahq",
+            "image_channel": 3,
+            "image_size": 128,
+            "augmentation": False,
+        },
+
+        "image_index_1": 17570,
+        "image_index_2": 23404,
+    }
+
+    runner = Sampler(args)
+    runner.start()

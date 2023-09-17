@@ -47,32 +47,28 @@ class HORSE(Dataset):
         gt = image.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
 
         return {
+            "idx": index,
             "x_0": image,
             "gt": gt,
-            "x_T": torch.randn(self.image_channel, self.image_size, self.image_size),
         }
 
     @staticmethod
     def collate_fn(batch):
         batch_size = len(batch)
 
-        x_0 = []
-        gts = []
-        x_T =[]
+        idx=[]
+        x_0=[]
+        gt=[]
 
         for i in range(batch_size):
+            idx.append(batch[i]["idx"])
             x_0.append(batch[i]["x_0"])
-            gts.append(batch[i]["gt"])
-            x_T.append(batch[i]["x_T"])
-
+            gt.append(batch[i]["gt"])
 
         x_0 = torch.stack(x_0, dim=0)
-        x_T = torch.stack(x_T, dim=0)
 
         return {
-            "net_input": {
-                "x_0": x_0,
-                "x_T": x_T,
-            },
-            "gts": np.asarray(gts),
+            "idx": idx,
+            "x_0": x_0,
+            "gts": np.asarray(gt),
         }

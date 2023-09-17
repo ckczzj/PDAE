@@ -18,12 +18,12 @@ from PIL import Image
 
 
 def init_distributed_mode(args):
-    args.global_rank = int(os.environ["RANK"])
+    args.global_rank = int(os.environ['RANK'])
     args.global_world_size = int(os.environ['WORLD_SIZE'])
     args.local_rank = int(os.environ['LOCAL_RANK'])
     args.local_world_size = int(os.environ['LOCAL_WORLD_SIZE'])
 
-    torch.distributed.init_process_group(backend="nccl")
+    torch.distributed.init_process_group(backend='nccl')
     torch.distributed.barrier()
     assert torch.distributed.is_initialized()
     print('DDP initialized as global_rank {}/{}, local_rank {}/{}'.format(args.global_rank, args.global_world_size, args.local_rank, args.local_world_size), flush=True)

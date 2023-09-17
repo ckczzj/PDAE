@@ -75,7 +75,6 @@ class CELEBAHQ(Dataset):
             "idx": index,
             "x_0": image,
             "gt": gt,
-            "x_T": torch.randn(self.image_channel, self.image_size, self.image_size),
             "label": torch.tensor(label) # [-1, -1, 1, -1, 1, ...]
         }
 
@@ -83,28 +82,22 @@ class CELEBAHQ(Dataset):
     def collate_fn(batch):
         batch_size = len(batch)
 
-        idx = []
-        x_0 = []
-        gts = []
-        x_T = []
-        label = []
+        idx=[]
+        x_0=[]
+        gt=[]
+        label=[]
         for i in range(batch_size):
             idx.append(batch[i]["idx"])
             x_0.append(batch[i]["x_0"])
-            gts.append(batch[i]["gt"])
-            x_T.append(batch[i]["x_T"])
+            gt.append(batch[i]["gt"])
             label.append(batch[i]["label"])
 
         x_0 = torch.stack(x_0, dim=0)
-        x_T = torch.stack(x_T, dim=0)
         label = torch.stack(label, dim=0)
 
         return {
-            "net_input": {
-                "x_0": x_0,
-                "x_T": x_T,
-                "label": label,
-            },
             "idx": idx,
-            "gts": np.asarray(gts),
+            "x_0": x_0,
+            "gts": np.asarray(gt),
+            "label": label,
         }

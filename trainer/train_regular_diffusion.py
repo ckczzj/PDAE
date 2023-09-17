@@ -81,7 +81,7 @@ class RegularDiffusionTrainer(BaseTrainer):
                     start_time = time.time_ns()
                     output = self.gaussian_diffusion.regular_train_one_batch(
                         denoise_fn=self.denoise_fn,
-                        x_0=move_to_cuda(batch["net_input"]["x_0"])
+                        x_0=move_to_cuda(batch["x_0"])
                     )
                     # torch.distributed.barrier()   CUDA operations are executed asynchronously, the timing will be accumulated in the next synchronizing operation
                     time_meter['forward'] += (time.time_ns() - start_time) / 1e9
@@ -150,7 +150,7 @@ class RegularDiffusionTrainer(BaseTrainer):
                 images = self.gaussian_diffusion.regular_ddim_sample(
                     ddim_style=f'ddim100',
                     denoise_fn=self.ema_denoise_fn,
-                    x_T=move_to_cuda(batch["net_input"]["x_T"]),
+                    x_T=move_to_cuda(torch.randn_like(batch["x_0"])),
                 )
                 images = images.mul(0.5).add(0.5).mul(255).add(0.5).clamp(0, 255)
                 images = images.permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
