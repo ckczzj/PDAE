@@ -52,6 +52,12 @@ You should put download in the root dicretory of this project and maintain their
 
 
 
+## Install Requirements
+```
+pip install -r requirements.txt
+```
+
+
 
 ## Training
 
@@ -94,7 +100,8 @@ You can change the config file and run path in the script file.
 ## Evaluation
 
 ```
-CUDA_VISIBLE_DEVICES=0 python3 sampler/autoencoding_example.py
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 1
 ```
 
 <div align=center><img src="./images/autoencoding_example_result.png" height="60"/></div>
@@ -102,6 +109,7 @@ CUDA_VISIBLE_DEVICES=0 python3 sampler/autoencoding_example.py
 
 
 ```
+# modify scripts/dist_sample.sh
 bash scripts/dist_sample.sh 1 0 4
 ```
 
@@ -111,7 +119,8 @@ PDAE achieves autoencoding reconstruction **SOTA** performance of **SSIM(0.994)*
 
 
 ```
-CUDA_VISIBLE_DEVICES=0 python3 sampler/denoise_one_step.py
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 1
 ```
 
 <div align=center><img src="./images/denoise_one_step_result.png" height="120"/></div>
@@ -130,7 +139,8 @@ bash scripts/dist_sample.sh 1 0 4
 
 
 ```
-CUDA_VISIBLE_DEVICES=0 python3 sampler/interpolation.py
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 1
 ```
 
 <div align=center><img src="./images/interpolation_result.png" height="120"/></div>
@@ -139,7 +149,8 @@ CUDA_VISIBLE_DEVICES=0 python3 sampler/interpolation.py
 
 
 ```
-CUDA_VISIBLE_DEVICES=0 python3 sampler/manipulation.py
+# modify scripts/dist_sample.sh
+bash scripts/dist_sample.sh 1 0 1
 ```
 
 <div align=center><img src="./images/manipulation_result.png" height="60"/></div>
