@@ -76,11 +76,11 @@ class GaussianDiffusion:
     @staticmethod
     def get_ddim_betas_and_timestep_map(ddim_style, original_alphas_cumprod):
         original_timesteps = original_alphas_cumprod.shape[0]
-        dim_step = int(ddim_style[len("ddim"):])
+        ddim_step = int(ddim_style[len("ddim"):])
         # data: x_{-1}  noisy latents: x_{0}, x_{1}, x_{2}, ..., x_{T-2}, x_{T-1}
         # encode: treat input x_{-1} as starting point x_{0}
         # sample: treat ending point x_{0} as output x_{-1}
-        use_timesteps = set([int(s) for s in list(np.linspace(0, original_timesteps - 1, dim_step + 1))])
+        use_timesteps = set([int(s) for s in list(np.linspace(0, original_timesteps - 1, ddim_step + 1))])
         timestep_map = []
 
         last_alpha_cumprod = 1.0
