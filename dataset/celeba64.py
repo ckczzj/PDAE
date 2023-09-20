@@ -50,7 +50,7 @@ class CELEBA64(Dataset):
         if self.split == "test":
             return 19963
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     def __getitem__(self, index):
         if not hasattr(self, 'txn'):
@@ -63,7 +63,7 @@ class CELEBA64(Dataset):
         elif self.split == "test":
             offset_index = 162770 + 19867 + index
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
         key = f'None-{str(offset_index).zfill(7)}'.encode('utf-8')
         img_bytes = self.txn.get(key)

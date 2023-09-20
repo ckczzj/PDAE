@@ -90,7 +90,7 @@ class LatentDiffusionTrainer(BaseTrainer):
                 weight_decay= float(optimizer_config["weight_decay"]),
             )
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     def train(self):
         acc_prediction_loss = 0
