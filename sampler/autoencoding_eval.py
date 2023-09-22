@@ -1,18 +1,18 @@
 import copy
 import argparse
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
-
-import lpips
 
 import dataset as dataset_module
 from diffusion.gaussian_diffusion import GaussianDiffusion
 import model.representation_learning.encoder as encoder_module
 import model.representation_learning.decoder as decoder_module
-from utils.utils import load_yaml, move_to_cuda, calculate_ssim, calculate_lpips, calculate_mse, set_worker_seed_builder
+from utils.utils import load_yaml, move_to_cuda, set_worker_seed_builder
 
 from sampler.base_sampler import BaseSampler
+from metric.lpips.lpips_metric import LPIPSMetric
+from metric.ssim.ssim_metric import SSIMMetric
+from metric.mse.mse_metric import MSEMetric
 
 class Sampler(BaseSampler):
     def __init__(self, args):
@@ -65,13 +65,11 @@ class Sampler(BaseSampler):
         self.decoder.eval()
         self.decoder.requires_grad_(False)
 
+        self.ssim_metric = SSIMMetric()
+        self.lpips_metric = LPIPSMetric(device=self.device)
+        self.mse_metric = MSEMetric()
+
     def start(self):
-        lpips_fn = lpips.LPIPS(net='alex').to(self.device)
-
-        ssim_score_list = []
-        lpips_score_list = []
-        mse_score_list = []
-
         with torch.inference_mode():
             for batch in self.dataloader:
                 x_0 = move_to_cuda(batch["x_0"])
@@ -85,31 +83,21 @@ class Sampler(BaseSampler):
                 norm_x_0 = (x_0 + 1.) / 2.
                 norm_reconstruction = (reconstruction + 1.) / 2.
 
-                ssim_score = calculate_ssim(norm_x_0, norm_reconstruction)
-                lpips_score = calculate_lpips(x_0, reconstruction, lpips_fn)
-                mse_score = calculate_mse(norm_x_0, norm_reconstruction)
+                self.ssim_metric.process(norm_x_0, norm_reconstruction)
+                self.lpips_metric.process(x_0, reconstruction)
+                self.mse_metric.process(norm_x_0, norm_reconstruction)
 
-                ssim_score_list.extend(ssim_score.tolist())
-                lpips_score_list.extend(lpips_score.tolist())
-                mse_score_list.extend(mse_score.tolist())
 
-                gather_ssim_score_list = self.gather_data(ssim_score_list)
-                gather_lpips_score_list = self.gather_data(lpips_score_list)
-                gather_mse_score_list = self.gather_data(mse_score_list)
-
-                if self.global_rank == 0:
-                    all_ssim_score_list = []
-                    all_lpips_score_list = []
-                    all_mse_score_list = []
-                    for data in gather_ssim_score_list:
-                        all_ssim_score_list.extend(data)
-                    for data in gather_lpips_score_list:
-                        all_lpips_score_list.extend(data)
-                    for data in gather_mse_score_list:
-                        all_mse_score_list.extend(data)
-
-                    print(len(all_ssim_score_list), len(all_lpips_score_list), len(all_mse_score_list))
-                    print(np.mean(all_ssim_score_list), np.mean(all_lpips_score_list), np.mean(all_mse_score_list))
+        ssim_results = self.ssim_metric.all_gather_results(self.global_world_size)
+        lpips_results = self.lpips_metric.all_gather_results(self.global_world_size)
+        mse_results = self.mse_metric.all_gather_results(self.global_world_size)
+        print(len(ssim_results), len(lpips_results), len(mse_results))
+        if self.global_rank == 0:
+            ssim = self.ssim_metric.compute_metrics(ssim_results)
+            lpips = self.lpips_metric.compute_metrics(lpips_results)
+            mse = self.mse_metric.compute_metrics(mse_results)
+            print("ssim: ", ssim, "lpips: ", lpips, "mse: ", mse)
+        torch.distributed.barrier()
 
 
 if __name__ == '__main__':
