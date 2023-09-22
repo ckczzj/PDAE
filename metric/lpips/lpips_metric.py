@@ -10,8 +10,8 @@ class LPIPSMetric(BaseMetric):
         self.device = device
         self.lpips_fn = lpips.LPIPS(net='alex').to(device)
 
-    def process(self, target, samples):
-        lpips = calculate_lpips(target, samples, self.lpips_fn)
+    def process(self, targets, samples):
+        lpips = calculate_lpips(targets, samples, self.lpips_fn)
         self.results.extend(lpips.tolist())
 
     def compute_metrics(self, results):

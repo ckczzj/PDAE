@@ -7,8 +7,8 @@ class MSEMetric(BaseMetric):
     def __init__(self):
         super().__init__()
 
-    def process(self, target, samples):
-        mse = calculate_mse(target, samples)
+    def process(self, targets, samples):
+        mse = calculate_mse(targets, samples)
         self.results.extend(mse.tolist())
 
     def compute_metrics(self, results):

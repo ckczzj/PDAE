@@ -7,8 +7,8 @@ class SSIMMetric(BaseMetric):
     def __init__(self):
         super().__init__()
 
-    def process(self, target, samples):
-        ssim = calculate_ssim(target, samples)
+    def process(self, targets, samples):
+        ssim = calculate_ssim(targets, samples)
         self.results.extend(ssim.tolist())
 
     def compute_metrics(self, results):
