@@ -99,8 +99,10 @@ You can change the config file and run path in the script file.
 
 ## Evaluation
 
+### autoencoding
+
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/autoencoding_example.py"
 bash scripts/dist_sample.sh 1 0 1
 ```
 
@@ -108,8 +110,10 @@ bash scripts/dist_sample.sh 1 0 1
 
 
 
+### autoencoding evaluation
+
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/autoencoding_eval.py"
 bash scripts/dist_sample.sh 1 0 4
 ```
 
@@ -117,9 +121,11 @@ PDAE achieves autoencoding reconstruction **SOTA** performance of **SSIM(0.994)*
 
 
 
+### denoise one step
+
 
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/denoise_one_step.py"
 bash scripts/dist_sample.sh 1 0 1
 ```
 
@@ -127,19 +133,21 @@ bash scripts/dist_sample.sh 1 0 1
 
 
 
+### posterior mean gap measure
+
 
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/gap_measure.py"
 bash scripts/dist_sample.sh 1 0 4
 ```
 
 <div align=center><img src="./images/gap_measure_result.png" height="300"/></div>
 
-
+### interpolation
 
 
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/interpolation.py"
 bash scripts/dist_sample.sh 1 0 1
 ```
 
@@ -147,9 +155,11 @@ bash scripts/dist_sample.sh 1 0 1
 
 
 
+### manipulation
+
 
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/manipulation.py"
 bash scripts/dist_sample.sh 1 0 1
 ```
 
@@ -157,8 +167,10 @@ bash scripts/dist_sample.sh 1 0 1
 
 
 
+### unconditional sample
+
 ```
-# modify scripts/dist_sample.sh
+# modify scripts/dist_sample.sh to "${ROOT_DIR}/sampler/unconditional_sample.py"
 bash scripts/dist_sample.sh 1 0 4
 ```
 
